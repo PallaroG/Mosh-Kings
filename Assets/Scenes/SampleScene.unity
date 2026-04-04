@@ -134,7 +134,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &2303370
 Transform:
   m_ObjectHideFlags: 0
@@ -872,7 +872,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1774762629
 Transform:
   m_ObjectHideFlags: 0
@@ -900,11 +900,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08a5f6759ea9aff4ea304902e9d1da7d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemySpawner
-  enemyPrefab: {fileID: 219939091815516789, guid: a93df17553b58554e85f04a1e8f3b2ad, type: 3}
+  enemyPrefab: {fileID: 2752172474590410865}
   spawnCenter: {fileID: 0}
-  spawnRadius: 20.7
+  spawnRadius: 20
   spawnInterval: 2
-  navMeshSampleMaxDistance: 5
+  navMeshSampleMaxDistance: 4
   poolDefaultCapacity: 20
   poolMaxSize: 100
   autoSpawn: 1
@@ -1016,6 +1016,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2303370}
     m_Modifications:
+    - target: {fileID: 273129854395059542, guid: a93df17553b58554e85f04a1e8f3b2ad, type: 3}
+      propertyPath: maxHealth
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 5445876284816859661, guid: a93df17553b58554e85f04a1e8f3b2ad, type: 3}
+      propertyPath: m_LinearDamping
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 5511852365383566245, guid: a93df17553b58554e85f04a1e8f3b2ad, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -1074,6 +1082,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5511852365383566245, guid: a93df17553b58554e85f04a1e8f3b2ad, type: 3}
   m_PrefabInstance: {fileID: 2752172474590410863}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &2752172474590410865 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 273129854395059542, guid: a93df17553b58554e85f04a1e8f3b2ad, type: 3}
+  m_PrefabInstance: {fileID: 2752172474590410863}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e4faa2de03297d48b08af52a379693e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
 --- !u!1001 &7532575582519598833
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1092,11 +1111,35 @@ PrefabInstance:
       objectReference: {fileID: 7532575582519598835}
     - target: {fileID: 4488159743301865286, guid: daa08a974a621b14899bc8886fc97631, type: 3}
       propertyPath: drawDebugGizmo
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4488159743301865286, guid: daa08a974a621b14899bc8886fc97631, type: 3}
       propertyPath: hitMask.m_Bits
       value: 64
+      objectReference: {fileID: 0}
+    - target: {fileID: 4488159743301865286, guid: daa08a974a621b14899bc8886fc97631, type: 3}
+      propertyPath: straight.damage
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 4488159743301865286, guid: daa08a974a621b14899bc8886fc97631, type: 3}
+      propertyPath: straight.halfExtents.x
+      value: 0.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 4488159743301865286, guid: daa08a974a621b14899bc8886fc97631, type: 3}
+      propertyPath: straight.halfExtents.y
+      value: 0.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 4488159743301865286, guid: daa08a974a621b14899bc8886fc97631, type: 3}
+      propertyPath: straight.halfExtents.z
+      value: 0.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 4488159743301865286, guid: daa08a974a621b14899bc8886fc97631, type: 3}
+      propertyPath: straight.localOffset.z
+      value: 1.58
+      objectReference: {fileID: 0}
+    - target: {fileID: 4488159743301865286, guid: daa08a974a621b14899bc8886fc97631, type: 3}
+      propertyPath: straight.knockbackForce
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 4488159743301865286, guid: daa08a974a621b14899bc8886fc97631, type: 3}
       propertyPath: straight.animationTrigger
@@ -1165,6 +1208,14 @@ PrefabInstance:
     - target: {fileID: 6892887412075408820, guid: daa08a974a621b14899bc8886fc97631, type: 3}
       propertyPath: field of view
       value: 85
+      objectReference: {fileID: 0}
+    - target: {fileID: 8027063085747452228, guid: daa08a974a621b14899bc8886fc97631, type: 3}
+      propertyPath: walkSpeed
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 8027063085747452228, guid: daa08a974a621b14899bc8886fc97631, type: 3}
+      propertyPath: sprintSpeed
+      value: 12
       objectReference: {fileID: 0}
     - target: {fileID: 8993133432775572337, guid: daa08a974a621b14899bc8886fc97631, type: 3}
       propertyPath: m_Enabled

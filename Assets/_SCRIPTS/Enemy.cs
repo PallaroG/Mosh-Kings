@@ -1,103 +1,116 @@
+using System.Collections;
 using UnityEngine;
-using UnityEngine.AI;
+using UnityEngine.AI; // Necessário para o NavMeshAgent
 using UnityEngine.Pool;
 
-[RequireComponent(typeof(NavMeshAgent))]
-public class Enemy : MonoBehaviour
+public class Enemy : MonoBehaviour, IDamageable
 {
-    [Header("Alvo")]
-    [Tooltip("Opcional: se definido, usa este alvo em vez de buscar por tag Player.")]
-    public Transform targetOverride;
+    [Header("Status do Punk")]
+    public float maxHealth = 100f;
+    private float currentHealth;
 
-    [Header("Comportamento")]
-    [Tooltip("Com que frequência atualiza destino do agente.")]
-    public float repathInterval = 0.2f;
+    [Header("IA e Navegação")]
+    public NavMeshAgent agent;
+    private Transform playerTarget;
 
-    [Tooltip("Vida simples para exemplo.")]
-    public int maxHealth = 100;
+    [Header("Feedback Visual")]
+    [Tooltip("Arraste o SpriteRenderer do inimigo aqui para ele piscar ao tomar dano.")]
+    public SpriteRenderer spriteRenderer;
+    public Color damageColor = Color.red;
+    private Color originalColor;
 
-    private int currentHealth;
-    private NavMeshAgent agent;
-    private Transform target;
-    private IObjectPool<Enemy> pool;
-    private float repathTimer;
+    // Referência do Object Pool enviada pelo EnemySpawner
+    private IObjectPool<Enemy> _pool;
+
+    public void SetPool(IObjectPool<Enemy> pool)
+    {
+        _pool = pool;
+    }
 
     private void Awake()
     {
-        agent = GetComponent<NavMeshAgent>();
-    }
+        // Pega automaticamente o NavMeshAgent anexado ao Punk
+        if (agent == null) agent = GetComponent<NavMeshAgent>();
 
-    /// <summary>
-    /// Chamado pelo spawner após criar/obter objeto do pool.
-    /// </summary>
-    public void SetPool(IObjectPool<Enemy> objectPool)
-    {
-        pool = objectPool;
+        // Procura automaticamente o Player na cena (O seu Player precisa ter a tag "Player"!)
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
+        {
+            playerTarget = player.transform;
+        }
+        else
+        {
+            Debug.LogWarning("<color=yellow>[Enemy]</color> O inimigo não achou o Player! Certifique-se de que o objeto do jogador tem a tag 'Player'.");
+        }
     }
 
     private void OnEnable()
     {
+        // Sempre que o inimigo for "puxado" do pool, a vida volta ao máximo
         currentHealth = maxHealth;
-        repathTimer = 0f;
 
-        ResolveTarget();
+        if (spriteRenderer != null)
+        {
+            originalColor = spriteRenderer.color;
+        }
 
-        // Garante estado limpo ao reusar do pool
+        // Reativa a movimentação caso tenha sido desativada ao morrer
         if (agent != null)
         {
             agent.isStopped = false;
-            agent.ResetPath();
         }
     }
 
     private void Update()
     {
-        if (target == null || agent == null || !agent.isOnNavMesh) return;
-
-        repathTimer += Time.deltaTime;
-        if (repathTimer >= repathInterval)
+        // O Cérebro da Roda Punk: persegue o jogador incessantemente!
+        if (agent != null && agent.isActiveAndEnabled && playerTarget != null)
         {
-            repathTimer = 0f;
-            agent.SetDestination(target.position);
+            agent.SetDestination(playerTarget.position);
         }
     }
 
-    private void ResolveTarget()
-    {
-        if (targetOverride != null)
-        {
-            target = targetOverride;
-            return;
-        }
-
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        target = player != null ? player.transform : null;
-    }
-
-    /// <summary>
-    /// Exemplo de dano.
-    /// </summary>
-    public void TakeDamage(int amount)
+    public void TakeDamage(float amount)
     {
         currentHealth -= amount;
-        if (currentHealth <= 0)
-            Die();
-    }
 
-    /// <summary>
-    /// Em vez de destruir, devolve para o pool.
-    /// </summary>
-    public void Die()
-    {
-        if (agent != null && agent.isOnNavMesh)
+        // Feedback visual do soco
+        if (spriteRenderer != null)
         {
-            agent.isStopped = true;
-            agent.ResetPath();
+            StopAllCoroutines();
+            StartCoroutine(FlashDamageRoutine());
         }
 
-        if (pool != null)
-            pool.Release(this);
+        // Checa se o punk foi nocauteado
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+    }
+
+    private IEnumerator FlashDamageRoutine()
+    {
+        spriteRenderer.color = damageColor;
+        yield return new WaitForSeconds(0.1f);
+        spriteRenderer.color = originalColor;
+    }
+
+    private void Die()
+    {
+        // Para a movimentação ao morrer
+        if (agent != null)
+        {
+            agent.isStopped = true;
+        }
+
+        // Devolvemos este inimigo para o Spawner reciclar
+        if (_pool != null)
+        {
+            _pool.Release(this);
+        }
         else
-            gameObject.SetActive(false); // fallback de segurança
+        {
+            gameObject.SetActive(false);
+        }
     }
 }
