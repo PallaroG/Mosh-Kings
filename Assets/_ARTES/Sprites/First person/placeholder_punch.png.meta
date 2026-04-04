@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 88d3edc4217a2b74292c240615497d8f
+guid: 15c4a4987bb19e745a33b7526b60f911
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -97,23 +97,67 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: mao_aberta_esq_0
+      name: placeholder_punch_0
       rect:
         serializedVersion: 2
-        x: 82
-        y: 56
-        width: 368
-        height: 278
+        x: 58
+        y: 617
+        width: 519
+        height: 413
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: d22c8f4ee9677464eb0653e183fc46cc
-      internalID: 1403047401
+      spriteID: 06da0bc02358cc8458885d70ca24f0ff
+      internalID: 1065433935
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: placeholder_punch_1
+      rect:
+        serializedVersion: 2
+        x: 726
+        y: 617
+        width: 451
+        height: 391
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: de9bc604b623a5c4f897418e74d2ec66
+      internalID: 632046006
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: placeholder_punch_2
+      rect:
+        serializedVersion: 2
+        x: 58
+        y: 17
+        width: 519
+        height: 413
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4f3ffdc92fd71a945aedfe469f3e13a9
+      internalID: -714346874
       vertices: []
       indices: 
       edges: []
@@ -122,7 +166,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 73f039fcd00d0234e9728274ddb26fbd
+    spriteID: 1d6308e0592565c42849916ea371d18f
     internalID: 0
     vertices: []
     indices: 
@@ -130,9 +174,13 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     spriteCustomMetadata:
-      entries: []
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
-      mao_aberta_esq_0: 1403047401
+      placeholder_punch_0: 1065433935
+      placeholder_punch_1: 632046006
+      placeholder_punch_2: -714346874
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
