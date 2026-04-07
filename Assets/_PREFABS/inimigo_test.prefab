@@ -101,7 +101,8 @@ GameObject:
   m_Component:
   - component: {fileID: 5511852365383566245}
   - component: {fileID: 7515545340926120874}
-  - component: {fileID: 273129854395059542}
+  - component: {fileID: 362892335185334090}
+  - component: {fileID: 5221387912229142657}
   - component: {fileID: 2032300071759828051}
   - component: {fileID: 8230564927348763256}
   - component: {fileID: 1909584876803892945}
@@ -144,7 +145,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BillboardToggle
   billboardAtivo: 1
   travarEixoY: 1
---- !u!114 &273129854395059542
+--- !u!114 &362892335185334090
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -155,11 +156,27 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8e4faa2de03297d48b08af52a379693e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
-  maxHealth: 20
-  agent: {fileID: 0}
+  m_EditorClassIdentifier: Assembly-CSharp::Enemy
+  maxHealth: 100
+  agent: {fileID: 1909584876803892945}
   spriteRenderer: {fileID: 2415400800450708378}
   damageColor: {r: 1, g: 0, b: 0, a: 1}
+--- !u!114 &5221387912229142657
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8958419805364726225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6ebcb019600c524a9cd2d31b8fdb632, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyPushDamage
+  basePushDamage: 8
+  impactMultiplier: 0.15
+  pushForce: 6
+  hitCooldown: 0.35
 --- !u!33 &2032300071759828051
 MeshFilter:
   m_ObjectHideFlags: 0

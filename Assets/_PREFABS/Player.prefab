@@ -166,12 +166,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6150268723588109213}
+  - component: {fileID: 7559265001300074148}
   - component: {fileID: 4488159743301865286}
   - component: {fileID: 8027063085747452228}
   - component: {fileID: 7158601134216623296}
   - component: {fileID: 8993133432775572337}
   - component: {fileID: 4472078179590121183}
   - component: {fileID: 776306347840967128}
+  - component: {fileID: 148993118583141034}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -195,6 +197,20 @@ Transform:
   - {fileID: 5452682769568064874}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7559265001300074148
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5464361030809264706}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 898bc5436df9cae4eb0b93340e1fb7f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerStamina
+  maxStamina: 100
+  currentStamina: 0
 --- !u!114 &4488159743301865286
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -207,6 +223,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 352a697f9eb52554e8bdf5a5b29a1df5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMeleeCombat
+  uiAnimator: {fileID: 0}
+  playerCamera: {fileID: 0}
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 0
+  singleHitPerSwing: 1
+  straight:
+    animationTrigger: 
+    damage: 0
+    knockbackForce: 0
+    halfExtents: {x: 0, y: 0, z: 0}
+    localOffset: {x: 0, y: 0, z: 0}
+  overhead:
+    animationTrigger: 
+    damage: 0
+    knockbackForce: 0
+    halfExtents: {x: 0, y: 0, z: 0}
+    localOffset: {x: 0, y: 0, z: 0}
+  uppercut:
+    animationTrigger: 
+    damage: 0
+    knockbackForce: 0
+    halfExtents: {x: 0, y: 0, z: 0}
+    localOffset: {x: 0, y: 0, z: 0}
+  drawDebugGizmo: 1
+  debugAttackType: 0
+  gizmoColor: {r: 1, g: 0, b: 0, a: 0.35}
 --- !u!114 &8027063085747452228
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -229,6 +272,9 @@ MonoBehaviour:
   jumpHeight: 1.2
   gravity: -25
   groundedStickForce: -2
+  externalAcceleration: 30
+  externalDeceleration: 20
+  maxExternalSpeed: 10
   sprintKey: 304
   jumpKey: 32
 --- !u!33 &7158601134216623296
@@ -336,3 +382,30 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!54 &148993118583141034
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5464361030809264706}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 80
+  m_CollisionDetection: 0

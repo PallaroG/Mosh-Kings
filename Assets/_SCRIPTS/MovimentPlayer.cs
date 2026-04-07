@@ -21,6 +21,11 @@ public class MovimentPlayer : MonoBehaviour
     [SerializeField] private float gravity = -25f;
     [SerializeField] private float groundedStickForce = -2f;
 
+    [Header("Forças Externas (Empurrão)")]
+    [SerializeField] private float externalAcceleration = 30f; // entra rápido no tranco
+    [SerializeField] private float externalDeceleration = 20f; // desacelera ao longo do tempo
+    [SerializeField] private float maxExternalSpeed = 10f;     // limite de velocidade externa acumulada
+
     [Header("Input")]
     [SerializeField] private KeyCode sprintKey = KeyCode.LeftShift;
     [SerializeField] private KeyCode jumpKey = KeyCode.Space;
@@ -28,6 +33,10 @@ public class MovimentPlayer : MonoBehaviour
     private CharacterController controller;
     private Vector3 horizontalVelocity;
     private float verticalVelocity;
+
+    // Empurrão / knockback
+    private Vector3 externalVelocity;
+    private Vector3 externalTargetVelocity;
 
     public bool JumpEnabled
     {
@@ -46,6 +55,17 @@ public class MovimentPlayer : MonoBehaviour
     private void Update()
     {
         HandleMovement();
+    }
+
+    // Chamado por inimigos para aplicar empurrão no CharacterController
+    public void AddPush(Vector3 direction, float force)
+    {
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 0.0001f) return;
+
+        direction.Normalize();
+        externalTargetVelocity += direction * force;
+        externalTargetVelocity = Vector3.ClampMagnitude(externalTargetVelocity, maxExternalSpeed);
     }
 
     private void HandleMovement()
@@ -80,6 +100,19 @@ public class MovimentPlayer : MonoBehaviour
             accelRate * control * Time.deltaTime
         );
 
+        // Empurrão: acelera em direção ao alvo e desacelera com o tempo
+        externalVelocity = Vector3.MoveTowards(
+            externalVelocity,
+            externalTargetVelocity,
+            externalAcceleration * Time.deltaTime
+        );
+
+        externalTargetVelocity = Vector3.MoveTowards(
+            externalTargetVelocity,
+            Vector3.zero,
+            externalDeceleration * Time.deltaTime
+        );
+
         // Pulo e gravidade
         if (controller.isGrounded)
         {
@@ -95,8 +128,8 @@ public class MovimentPlayer : MonoBehaviour
 
         verticalVelocity += gravity * Time.deltaTime;
 
-        // Movimento final
-        Vector3 finalVelocity = horizontalVelocity;
+        // Movimento final = input + empurrão
+        Vector3 finalVelocity = horizontalVelocity + externalVelocity;
         finalVelocity.y = verticalVelocity;
 
         controller.Move(finalVelocity * Time.deltaTime);

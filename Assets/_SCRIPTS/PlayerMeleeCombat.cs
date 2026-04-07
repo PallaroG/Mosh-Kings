@@ -204,4 +204,5 @@ public class PlayerMeleeCombat : MonoBehaviour
 public interface IDamageable
 {
     void TakeDamage(float amount);
+
 }
