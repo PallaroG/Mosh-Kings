@@ -360,6 +360,37 @@ Transform:
   - {fileID: 200374017}
   m_Father: {fileID: 23048665}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &375770202
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 375770203}
+  m_Layer: 0
+  m_Name: ------------------
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &375770203
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 375770202}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1832679642}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -516,14 +547,14 @@ RectTransform:
   m_GameObject: {fileID: 575756673}
   m_LocalRotation: {x: 0.0009777335, y: 0.22939411, z: -0.0041485443, w: 0.9733243}
   m_LocalPosition: {x: 0, y: 0, z: -10}
-  m_LocalScale: {x: 517.9994, y: 420.76443, z: 956.3114}
+  m_LocalScale: {x: 517.9994, y: 420.76456, z: 956.3114}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 665364425}
   m_LocalEulerAnglesHint: {x: 0.218, y: 26.522, z: -0.437}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -140, y: 121}
+  m_AnchoredPosition: {x: -140.00012, y: 121}
   m_SizeDelta: {x: 1, y: 1}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!95 &575756675
@@ -1154,8 +1185,9 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1912037965}
   - {fileID: 663982641}
+  - {fileID: 375770203}
+  - {fileID: 1912037965}
   - {fileID: 2303370}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
