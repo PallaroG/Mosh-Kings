@@ -1,15 +1,10 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Netcode;
 
-public class PlayerMeleeCombat : MonoBehaviour
+public class PlayerMeleeCombat : NetworkBehaviour
 {
-    public enum AttackType
-    {
-        Straight,
-        Overhead,
-        Uppercut
-    }
+    public enum AttackType { Straight, Overhead, Uppercut }
 
     [System.Serializable]
     public struct AttackData
@@ -20,25 +15,16 @@ public class PlayerMeleeCombat : MonoBehaviour
         [Header("Combat")]
         public float damage;
         public float knockbackForce;
-
-        [Tooltip("Metade do tamanho da caixa do golpe (como no OverlapBox).")]
         public Vector3 halfExtents;
-
-        [Tooltip("Offset local em relação à câmera (x=lado, y=altura, z=frente).")]
         public Vector3 localOffset;
     }
 
-    [Header("References (arrastar no Inspector)")]
-    [Tooltip("Animator da UI/arma/mãos em primeira pessoa.")]
+    [Header("References")]
     public Animator uiAnimator;
-
-    [Tooltip("Câmera principal do jogador (FPS Camera).")]
     public Camera playerCamera;
 
     [Header("Detection")]
     public LayerMask hitMask;
-
-    [Tooltip("Evita múltiplos hits no mesmo alvo dentro do mesmo evento de ataque.")]
     public bool singleHitPerSwing = true;
 
     [Header("Attack Config")]
@@ -52,90 +38,87 @@ public class PlayerMeleeCombat : MonoBehaviour
     public Color gizmoColor = new Color(1f, 0f, 0f, 0.35f);
 
     private readonly Collider[] _hitBuffer = new Collider[32];
-    private readonly HashSet<Collider> _alreadyHit = new HashSet<Collider>();
-
-    #region Public API (input -> animação)
-
-    public void TryAttack(AttackType type)
-    {
-        if (uiAnimator == null) return;
-
-        AttackData data = GetAttackData(type);
-
-        if (!string.IsNullOrWhiteSpace(data.animationTrigger))
-        {
-            uiAnimator.SetTrigger(data.animationTrigger);
-        }
-    }
+    private readonly HashSet<Collider> _alreadyHit = new();
 
     private void Update()
     {
-        // Detecta o clique usando o Input Manager clássico
+        if (!IsSpawned || !IsOwner) return;
+
         if (Input.GetMouseButtonDown(0))
-        {
             TryAttack(AttackType.Straight);
-        }
     }
 
-    #endregion
-
-    #region Animation Events
-
-    public void AE_Hit_Straight()
+    public void TryAttack(AttackType type)
     {
-        PerformHit(AttackType.Straight);
+        if (!IsOwner) return;
+
+        AttackData data = GetAttackData(type);
+        if (uiAnimator != null && !string.IsNullOrWhiteSpace(data.animationTrigger))
+            uiAnimator.SetTrigger(data.animationTrigger);
+
+        PlayAttackAnimClientRpc((int)type);
     }
 
-    public void AE_Hit_Overhead()
+    [ClientRpc]
+    private void PlayAttackAnimClientRpc(int attackTypeInt)
     {
-        PerformHit(AttackType.Overhead);
+        if (IsOwner) return; // dono já animou localmente
+
+        AttackType type = (AttackType)attackTypeInt;
+        AttackData data = GetAttackData(type);
+
+        if (uiAnimator != null && !string.IsNullOrWhiteSpace(data.animationTrigger))
+            uiAnimator.SetTrigger(data.animationTrigger);
     }
 
-    public void AE_Hit_Uppercut()
+    // Animation Events
+    public void AE_Hit_Straight() => RequestHit(AttackType.Straight);
+    public void AE_Hit_Overhead() => RequestHit(AttackType.Overhead);
+    public void AE_Hit_Uppercut() => RequestHit(AttackType.Uppercut);
+
+    private void RequestHit(AttackType type)
     {
-        PerformHit(AttackType.Uppercut);
+        if (!IsOwner) return;
+        PerformHitServerRpc((int)type);
     }
 
-    #endregion
+    [ServerRpc]
+    private void PerformHitServerRpc(int attackTypeInt)
+    {
+        AttackType type = (AttackType)attackTypeInt;
+        PerformHitServer(type);
+    }
 
-    private void PerformHit(AttackType type)
+    private void PerformHitServer(AttackType type)
     {
         if (playerCamera == null) return;
 
         AttackData data = GetAttackData(type);
-
-        Vector3 center = GetWorldCenter(data.localOffset);
+        Vector3 center = playerCamera.transform.TransformPoint(data.localOffset);
         Quaternion rotation = playerCamera.transform.rotation;
 
         _alreadyHit.Clear();
 
         int hitCount = Physics.OverlapBoxNonAlloc(
-            center,
-            data.halfExtents,
-            _hitBuffer,
-            rotation,
-            hitMask,
-            QueryTriggerInteraction.Ignore
-        );
+            center, data.halfExtents, _hitBuffer, rotation, hitMask, QueryTriggerInteraction.Ignore);
 
         for (int i = 0; i < hitCount; i++)
         {
             Collider col = _hitBuffer[i];
             if (col == null) continue;
-
-            if (singleHitPerSwing && _alreadyHit.Contains(col))
-                continue;
-
+            if (singleHitPerSwing && _alreadyHit.Contains(col)) continue;
             _alreadyHit.Add(col);
 
-            var damageable = col.GetComponentInParent<IDamageable>();
-            if (damageable != null)
+            var stamina = col.GetComponentInParent<PlayerStamina>();
+            if (stamina != null)
             {
-                damageable.TakeDamage(data.damage);
+                stamina.ReceivePushDamage(data.damage);
             }
             else
             {
-                col.transform.root.SendMessage("TakeDamage", data.damage, SendMessageOptions.DontRequireReceiver);
+                var damageable = col.GetComponentInParent<IDamageable>();
+                if (damageable != null) damageable.TakeDamage(data.damage);
+                else col.transform.root.SendMessage("TakeDamage", data.damage, SendMessageOptions.DontRequireReceiver);
             }
 
             Rigidbody rb = col.attachedRigidbody;
@@ -149,36 +132,26 @@ public class PlayerMeleeCombat : MonoBehaviour
         }
     }
 
-    private Vector3 GetWorldCenter(Vector3 localOffset)
-    {
-        return playerCamera.transform.TransformPoint(localOffset);
-    }
-
     private Vector3 GetKnockbackDirection(AttackType type)
     {
         Vector3 forward = playerCamera.transform.forward;
-        Vector3 up = Vector3.up;
-
         switch (type)
         {
-            case AttackType.Uppercut:
-                return (forward + up * 0.9f).normalized;
-            case AttackType.Overhead:
-                return (forward + Vector3.down * 0.15f).normalized;
-            default:
-                return forward.normalized;
+            case AttackType.Uppercut: return (forward + Vector3.up * 0.9f).normalized;
+            case AttackType.Overhead: return (forward + Vector3.down * 0.15f).normalized;
+            default: return forward.normalized;
         }
     }
 
     private AttackData GetAttackData(AttackType type)
     {
-        switch (type)
+        return type switch
         {
-            case AttackType.Straight: return straight;
-            case AttackType.Overhead: return overhead;
-            case AttackType.Uppercut: return uppercut;
-            default: return straight;
-        }
+            AttackType.Straight => straight,
+            AttackType.Overhead => overhead,
+            AttackType.Uppercut => uppercut,
+            _ => straight
+        };
     }
 
     private void OnDrawGizmos()
@@ -204,5 +177,4 @@ public class PlayerMeleeCombat : MonoBehaviour
 public interface IDamageable
 {
     void TakeDamage(float amount);
-
 }

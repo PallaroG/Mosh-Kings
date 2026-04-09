@@ -1,47 +1,82 @@
 using UnityEngine;
 using System;
+using Unity.Netcode;
 
-public class PlayerStamina : MonoBehaviour
+[RequireComponent(typeof(NetworkObject))]
+public class PlayerStamina : NetworkBehaviour
 {
     [Header("Cansaço")]
     [SerializeField] private float maxStamina = 100f;
-    [SerializeField] private float currentStamina;
 
-    // UI escuta esse evento
+    private NetworkVariable<float> currentStamina = new(
+        100f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
     public event Action<float, float> OnStaminaChanged;
 
-    public float CurrentStamina => currentStamina;
+    public float CurrentStamina => currentStamina.Value;
     public float MaxStamina => maxStamina;
 
-    private void Awake()
+    public override void OnNetworkSpawn()
     {
-        currentStamina = maxStamina;
-        NotifyChange();
+        currentStamina.OnValueChanged += OnStaminaValueChanged;
+
+        if (IsServer)
+            currentStamina.Value = maxStamina;
+
+        OnStaminaChanged?.Invoke(currentStamina.Value, maxStamina);
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        currentStamina.OnValueChanged -= OnStaminaValueChanged;
+    }
+
+    private void OnStaminaValueChanged(float oldValue, float newValue)
+    {
+        OnStaminaChanged?.Invoke(newValue, maxStamina);
+
+        if (newValue <= 0f && oldValue > 0f)
+            Debug.Log("Exausto!");
     }
 
     public void ReceivePushDamage(float damage)
     {
         if (damage <= 0f) return;
 
-        currentStamina = Mathf.Clamp(currentStamina - damage, 0f, maxStamina);
-        NotifyChange();
-
-        if (currentStamina <= 0f)
-        {
-            Debug.Log("Exausto!");
-        }
+        if (IsServer) ApplyDamageServer(damage);
+        else ReceivePushDamageServerRpc(damage);
     }
 
     public void Recover(float amount)
     {
         if (amount <= 0f) return;
 
-        currentStamina = Mathf.Clamp(currentStamina + amount, 0f, maxStamina);
-        NotifyChange();
+        if (IsServer) RecoverServer(amount);
+        else RecoverServerRpc(amount);
     }
 
-    private void NotifyChange()
+    [ServerRpc(RequireOwnership = false)]
+    private void ReceivePushDamageServerRpc(float damage)
     {
-        OnStaminaChanged?.Invoke(currentStamina, maxStamina);
+        ApplyDamageServer(damage);
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RecoverServerRpc(float amount)
+    {
+        RecoverServer(amount);
+    }
+
+    private void ApplyDamageServer(float damage)
+    {
+        currentStamina.Value = Mathf.Clamp(currentStamina.Value - damage, 0f, maxStamina);
+    }
+
+    private void RecoverServer(float amount)
+    {
+        currentStamina.Value = Mathf.Clamp(currentStamina.Value + amount, 0f, maxStamina);
     }
 }

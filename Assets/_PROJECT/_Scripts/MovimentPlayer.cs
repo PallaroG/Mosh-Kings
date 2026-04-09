@@ -1,9 +1,9 @@
 using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
+using Unity.Netcode;
 
 [RequireComponent(typeof(CharacterController))]
-public class MovementPlayer : MonoBehaviour
+[RequireComponent(typeof(NetworkObject))]
+public class MovementPlayer : NetworkBehaviour
 {
     [Header("Referências")]
     [SerializeField] private Transform cameraRoot;
@@ -22,9 +22,9 @@ public class MovementPlayer : MonoBehaviour
     [SerializeField] private float groundedStickForce = -2f;
 
     [Header("Forças Externas (Empurrão)")]
-    [SerializeField] private float externalAcceleration = 30f; // entra rápido no tranco
-    [SerializeField] private float externalDeceleration = 20f; // desacelera ao longo do tempo
-    [SerializeField] private float maxExternalSpeed = 10f;     // limite de velocidade externa acumulada
+    [SerializeField] private float externalAcceleration = 30f;
+    [SerializeField] private float externalDeceleration = 20f;
+    [SerializeField] private float maxExternalSpeed = 10f;
 
     [Header("Input")]
     [SerializeField] private KeyCode sprintKey = KeyCode.LeftShift;
@@ -34,9 +34,15 @@ public class MovementPlayer : MonoBehaviour
     private Vector3 horizontalVelocity;
     private float verticalVelocity;
 
-    // Empurrão / knockback
     private Vector3 externalVelocity;
     private Vector3 externalTargetVelocity;
+
+    // Sincronização básica de transform (caso você não esteja usando NetworkTransform)
+    private NetworkVariable<Vector3> netPosition = new(
+        Vector3.zero, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    private NetworkVariable<Quaternion> netRotation = new(
+        Quaternion.identity, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     public bool JumpEnabled
     {
@@ -52,13 +58,53 @@ public class MovementPlayer : MonoBehaviour
             cameraRoot = Camera.main.transform;
     }
 
-    private void Update()
+    public override void OnNetworkSpawn()
     {
-        HandleMovement();
+        if (IsServer)
+        {
+            netPosition.Value = transform.position;
+            netRotation.Value = transform.rotation;
+        }
     }
 
-    // Chamado por inimigos para aplicar empurrão no CharacterController
+    private void Update()
+    {
+        if (!IsSpawned) return;
+
+        if (IsOwner)
+        {
+            HandleMovementLocal();
+            SendTransformToServerRpc(transform.position, transform.rotation);
+        }
+        else
+        {
+            // Interpolação simples para remotos
+            transform.position = Vector3.Lerp(transform.position, netPosition.Value, 15f * Time.deltaTime);
+            transform.rotation = Quaternion.Slerp(transform.rotation, netRotation.Value, 15f * Time.deltaTime);
+        }
+    }
+
     public void AddPush(Vector3 direction, float force)
+    {
+        if (direction.sqrMagnitude < 0.0001f || force <= 0f) return;
+
+        if (IsServer)
+        {
+            ApplyPush(direction, force);
+        }
+        else
+        {
+            AddPushServerRpc(direction, force);
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void AddPushServerRpc(Vector3 direction, float force)
+    {
+        ApplyPush(direction, force);
+    }
+
+    private void ApplyPush(Vector3 direction, float force)
     {
         direction.y = 0f;
         if (direction.sqrMagnitude < 0.0001f) return;
@@ -68,17 +114,21 @@ public class MovementPlayer : MonoBehaviour
         externalTargetVelocity = Vector3.ClampMagnitude(externalTargetVelocity, maxExternalSpeed);
     }
 
-    private void HandleMovement()
+    [ServerRpc]
+    private void SendTransformToServerRpc(Vector3 pos, Quaternion rot)
     {
-        // Input
+        netPosition.Value = pos;
+        netRotation.Value = rot;
+    }
+
+    private void HandleMovementLocal()
+    {
         float x = Input.GetAxisRaw("Horizontal");
         float z = Input.GetAxisRaw("Vertical");
-        Vector2 input = new Vector2(x, z);
-        input = Vector2.ClampMagnitude(input, 1f);
+        Vector2 input = Vector2.ClampMagnitude(new Vector2(x, z), 1f);
 
-        // Direções relativas à câmera (sem componente Y)
-        Vector3 forward = cameraRoot.forward;
-        Vector3 right = cameraRoot.right;
+        Vector3 forward = cameraRoot != null ? cameraRoot.forward : transform.forward;
+        Vector3 right = cameraRoot != null ? cameraRoot.right : transform.right;
         forward.y = 0f;
         right.y = 0f;
         forward.Normalize();
@@ -86,49 +136,27 @@ public class MovementPlayer : MonoBehaviour
 
         Vector3 desiredMove = (forward * input.y + right * input.x);
 
-        // Velocidade alvo
         bool isSprinting = Input.GetKey(sprintKey);
         float targetSpeed = isSprinting ? sprintSpeed : walkSpeed;
         Vector3 targetVelocity = desiredMove * targetSpeed;
 
-        // Aceleração orgânica
         float control = controller.isGrounded ? 1f : airControlPercent;
         float accelRate = (targetVelocity.sqrMagnitude > 0.01f) ? acceleration : deceleration;
-        horizontalVelocity = Vector3.MoveTowards(
-            horizontalVelocity,
-            targetVelocity,
-            accelRate * control * Time.deltaTime
-        );
+        horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity, accelRate * control * Time.deltaTime);
 
-        // Empurrão: acelera em direção ao alvo e desacelera com o tempo
-        externalVelocity = Vector3.MoveTowards(
-            externalVelocity,
-            externalTargetVelocity,
-            externalAcceleration * Time.deltaTime
-        );
+        externalVelocity = Vector3.MoveTowards(externalVelocity, externalTargetVelocity, externalAcceleration * Time.deltaTime);
+        externalTargetVelocity = Vector3.MoveTowards(externalTargetVelocity, Vector3.zero, externalDeceleration * Time.deltaTime);
 
-        externalTargetVelocity = Vector3.MoveTowards(
-            externalTargetVelocity,
-            Vector3.zero,
-            externalDeceleration * Time.deltaTime
-        );
-
-        // Pulo e gravidade
         if (controller.isGrounded)
         {
-            if (verticalVelocity < 0f)
-                verticalVelocity = groundedStickForce;
+            if (verticalVelocity < 0f) verticalVelocity = groundedStickForce;
 
             if (jumpEnabled && Input.GetKeyDown(jumpKey))
-            {
-                // v = sqrt(h * -2g)
                 verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
-            }
         }
 
         verticalVelocity += gravity * Time.deltaTime;
 
-        // Movimento final = input + empurrão
         Vector3 finalVelocity = horizontalVelocity + externalVelocity;
         finalVelocity.y = verticalVelocity;
 
