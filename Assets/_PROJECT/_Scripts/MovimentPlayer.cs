@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 [RequireComponent(typeof(CharacterController))]
-public class MovimentPlayer : MonoBehaviour
+public class MovementPlayer : MonoBehaviour
 {
     [Header("Referências")]
     [SerializeField] private Transform cameraRoot;

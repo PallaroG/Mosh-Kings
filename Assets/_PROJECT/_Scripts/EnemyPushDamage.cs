@@ -32,8 +32,8 @@ public class EnemyPushDamage : MonoBehaviour
         if (stamina == null) stamina = other.GetComponentInParent<PlayerStamina>();
         if (stamina == null) return;
 
-        MovimentPlayer movement = other.GetComponent<MovimentPlayer>();
-        if (movement == null) movement = other.GetComponentInParent<MovimentPlayer>();
+        MovementPlayer movement = other.GetComponent<MovementPlayer>();
+        if (movement == null) movement = other.GetComponentInParent<MovementPlayer>();
 
         // Direção do empurrão (inimigo -> player)
         Vector3 dir = (other.transform.position - transform.position).normalized;
