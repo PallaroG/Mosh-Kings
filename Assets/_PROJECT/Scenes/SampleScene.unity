@@ -920,11 +920,6 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
---- !u!81 &738252226 stripped
-AudioListener:
-  m_CorrespondingSourceObject: {fileID: 6641241479277020970, guid: daa08a974a621b14899bc8886fc97631, type: 3}
-  m_PrefabInstance: {fileID: 7532575582519598833}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &806184954
 GameObject:
   m_ObjectHideFlags: 0
@@ -1276,6 +1271,69 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 665364425}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1193446236
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1193446238}
+  - component: {fileID: 1193446237}
+  m_Layer: 0
+  m_Name: fmod music
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1193446237
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1193446236}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a6610d2e704f1648819acc8d7460285, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FMODUnity::FMODUnity.StudioEventEmitter
+  CollisionTag: 
+  EventReference:
+    Guid:
+      Data1: -1715173870
+      Data2: 1151038680
+      Data3: 963650962
+      Data4: 1021200972
+    Path: event:/New Event
+  Event: 
+  EventPlayTrigger: 1
+  EventStopTrigger: 0
+  AllowFadeout: 1
+  TriggerOnce: 0
+  Preload: 0
+  NonRigidbodyVelocity: 0
+  Params: []
+  OverrideAttenuation: 0
+  OverrideMinDistance: 1
+  OverrideMaxDistance: 20
+--- !u!4 &1193446238
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1193446236}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -6.84295, y: 0.5, z: -1.66329}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1491079709
@@ -1734,7 +1792,7 @@ PrefabInstance:
     - target: {fileID: 4341055191362669256, guid: daa08a974a621b14899bc8886fc97631, type: 3}
       propertyPath: audioListenerRef
       value: 
-      objectReference: {fileID: 738252226}
+      objectReference: {fileID: 0}
     - target: {fileID: 4341055191362669256, guid: daa08a974a621b14899bc8886fc97631, type: 3}
       propertyPath: playerNetworkObject
       value: 
@@ -1892,16 +1950,38 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents:
-    - {fileID: 148993118583141034, guid: daa08a974a621b14899bc8886fc97631, type: 3}
+    - {fileID: 0}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2108886962759733421, guid: daa08a974a621b14899bc8886fc97631, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7532575582519598836}
   m_SourcePrefab: {fileID: 100100000, guid: daa08a974a621b14899bc8886fc97631, type: 3}
+--- !u!1 &7532575582519598834 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2108886962759733421, guid: daa08a974a621b14899bc8886fc97631, type: 3}
+  m_PrefabInstance: {fileID: 7532575582519598833}
+  m_PrefabAsset: {fileID: 0}
 --- !u!20 &7532575582519598835 stripped
 Camera:
   m_CorrespondingSourceObject: {fileID: 6892887412075408820, guid: daa08a974a621b14899bc8886fc97631, type: 3}
   m_PrefabInstance: {fileID: 7532575582519598833}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7532575582519598836
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7532575582519598834}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86c6556701af9e04380698b89f691b6e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FMODUnity::FMODUnity.StudioListener
+  nonRigidbodyVelocity: 0
+  attenuationObject: {fileID: 0}
 --- !u!1 &7532575582519598837 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5464361030809264706, guid: daa08a974a621b14899bc8886fc97631, type: 3}
@@ -1927,3 +2007,4 @@ SceneRoots:
   - {fileID: 1993185003}
   - {fileID: 1046425709}
   - {fileID: 580903911}
+  - {fileID: 1193446238}
