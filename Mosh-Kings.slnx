@@ -1,9 +1,14 @@
 ﻿<Solution>
+  <Project Path="Unity.Services.Multiplayer.csproj" />
+  <Project Path="Unity.Services.Multiplayer.Editor.Shared.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="Unity.Services.Multiplayer.Editor.Matchmaker.Authoring.csproj" />
   <Project Path="FMODUnityResonanceEditor.csproj" />
+  <Project Path="Unity.Services.Multiplayer.Editor.Matchmaker.Authoring.Core.csproj" />
   <Project Path="FMODUnityEditor.csproj" />
   <Project Path="FMODUnity.csproj" />
   <Project Path="FMODUnityHaptics.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="Unity.Services.Multiplayer.Editor.csproj" />
   <Project Path="FMODUnityResonance.csproj" />
 </Solution>

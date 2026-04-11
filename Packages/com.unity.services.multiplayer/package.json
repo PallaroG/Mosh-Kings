@@ -1,0 +1,35 @@
+{
+  "name": "com.unity.services.multiplayer",
+  "displayName": "Multiplayer Services",
+  "version": "2.2.0",
+  "unity": "2022.3",
+  "_upm": {
+    "gameService": {},
+    "changelog": "### Added\n- Multiplayer Session ScriptableObject to hold an ISession and expose the session events to the inspector.\n- Session Connector ScriptableObject to populate the Multiplayer Session ScriptableObject. Create, Join and CreateOrJoin connectors are available they include session settings as well as network settings.\n- Session Connector Wrapper Monobehaviour to automatically execute the specified connector on sign in.\n- New verbose settings in `Project Settings > Services > Multiplayer`.\n\n### Changed\n- `ISession` created or joined through the `MultiplayerService` in playmode in the editor are automatically left when exiting playmode.\n\n### Fixed\n- Fixed a bug in the sessions API where if using direct connections and Netcode for GameObjects 2.8 or later, an erroneous endpoint would be used for the connection data, leading to errors about an \"invalid listen endpoint\" followed by an endpoint with the port duplicated.\n- Exiting playmode in the Editor when a Session is connected with Netcode for GameObjects' `NetworkManager` doesn't log warnings anymore.\n- Fixed wrong Exception handling in the Matchmaker module and the `NetworkMetadata` handler when joinning a `ISession` already connected to a `NetworkManager`.\n- Fixed an issue where matchmaker queue deployment could fail when the queue contains filtered pools."
+  },
+  "description": "The Multiplayer Services package is a one-stop solution for adding multiplayer elements to a game developed in Unity. The Unity Gaming Services (UGS) Multiplayer services powers these capabilities to define how groups of players interact in your games.",
+  "dependencies": {
+    "com.unity.modules.unitywebrequest": "1.0.0",
+    "com.unity.nuget.newtonsoft-json": "3.2.2",
+    "com.unity.services.authentication": "3.6.0",
+    "com.unity.services.core": "1.16.0",
+    "com.unity.services.qos": "1.4.1",
+    "com.unity.services.wire": "1.4.3",
+    "com.unity.transport": "2.6.0",
+    "com.unity.collections": "2.2.1",
+    "com.unity.services.deployment": "1.7.1"
+  },
+  "relatedPackages": {
+    "com.unity.services.multiplayer.tests": "2.2.0"
+  },
+  "upmCi": {
+    "footprint": "b421cea2694f104bb31e5e3c4bb63c5699bcb8e4"
+  },
+  "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.services.multiplayer@2.2/manual/index.html",
+  "repository": {
+    "url": "https://github.cds.internal.unity3d.com/unity/operate-services-sdk.git",
+    "type": "git",
+    "revision": "5b0fe24dfc1507b92ceb16f357186254843abae7"
+  },
+  "_fingerprint": "260b2984cde54e07aba479869f50ee153bc54595"
+}
