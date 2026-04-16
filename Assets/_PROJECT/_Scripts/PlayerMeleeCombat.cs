@@ -114,14 +114,19 @@ public class PlayerMeleeCombat : NetworkBehaviour
         {
             Collider col = _hitBuffer[i];
             if (col == null) continue;
-            if (col.transform.root == transform.root) continue;
+
+            var targetNetworkObject = col.GetComponentInParent<NetworkObject>();
+            if (targetNetworkObject != null && targetNetworkObject.NetworkObjectId == NetworkObjectId) continue;
+
             if (singleHitPerSwing && _alreadyHit.Contains(col)) continue;
             _alreadyHit.Add(col);
 
             var stamina = col.GetComponentInParent<PlayerStamina>();
             if (stamina != null)
             {
-                var targetNetworkObject = stamina.GetComponent<NetworkObject>();
+                if (targetNetworkObject == null)
+                    targetNetworkObject = stamina.GetComponent<NetworkObject>();
+
                 if (!CanHitPlayer(targetNetworkObject)) continue;
 
                 ulong playerId = targetNetworkObject.NetworkObjectId;
@@ -158,8 +163,6 @@ public class PlayerMeleeCombat : NetworkBehaviour
     private bool CanHitPlayer(NetworkObject targetNetworkObject)
     {
         if (targetNetworkObject == null) return false;
-        // Checagem defensiva para evitar auto-hit em cenários fora do fluxo principal.
-        if (targetNetworkObject.NetworkObjectId == NetworkObjectId) return false;
 
         switch (pvpMode)
         {
