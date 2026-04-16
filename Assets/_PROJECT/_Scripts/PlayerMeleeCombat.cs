@@ -5,6 +5,7 @@ using Unity.Netcode;
 public class PlayerMeleeCombat : NetworkBehaviour
 {
     public enum AttackType { Straight, Overhead, Uppercut }
+    public enum PvPMode { Disabled, FreeForAll, TeamBased }
 
     [System.Serializable]
     public struct AttackData
@@ -32,6 +33,10 @@ public class PlayerMeleeCombat : NetworkBehaviour
     public AttackData overhead;
     public AttackData uppercut;
 
+    [Header("PvP Rules")]
+    [SerializeField] private PvPMode pvpMode = PvPMode.FreeForAll;
+    [SerializeField] private bool allowFriendlyFire = false;
+
     [Header("Debug")]
     public bool drawDebugGizmo = true;
     public AttackType debugAttackType = AttackType.Straight;
@@ -39,6 +44,8 @@ public class PlayerMeleeCombat : NetworkBehaviour
 
     private readonly Collider[] _hitBuffer = new Collider[32];
     private readonly HashSet<Collider> _alreadyHit = new();
+    private readonly HashSet<ulong> _alreadyHitPlayers = new();
+    private const int InvalidTeamId = -1;
 
     private void Update()
     {
@@ -98,6 +105,7 @@ public class PlayerMeleeCombat : NetworkBehaviour
         Quaternion rotation = playerCamera.transform.rotation;
 
         _alreadyHit.Clear();
+        _alreadyHitPlayers.Clear();
 
         int hitCount = Physics.OverlapBoxNonAlloc(
             center, data.halfExtents, _hitBuffer, rotation, hitMask, QueryTriggerInteraction.Ignore);
@@ -106,13 +114,33 @@ public class PlayerMeleeCombat : NetworkBehaviour
         {
             Collider col = _hitBuffer[i];
             if (col == null) continue;
+
+            var targetNetworkObject = col.GetComponentInParent<NetworkObject>();
+            if (targetNetworkObject != null && targetNetworkObject.NetworkObjectId == NetworkObjectId) continue;
+
             if (singleHitPerSwing && _alreadyHit.Contains(col)) continue;
             _alreadyHit.Add(col);
 
             var stamina = col.GetComponentInParent<PlayerStamina>();
             if (stamina != null)
             {
+                if (targetNetworkObject == null)
+                    targetNetworkObject = stamina.GetComponent<NetworkObject>();
+
+                if (!CanHitPlayer(targetNetworkObject)) continue;
+
+                ulong playerId = targetNetworkObject.NetworkObjectId;
+                if (_alreadyHitPlayers.Contains(playerId)) continue;
+                _alreadyHitPlayers.Add(playerId);
+
                 stamina.ReceivePushDamage(data.damage);
+
+                var movement = stamina.GetComponent<MovementPlayer>();
+                if (movement != null)
+                {
+                    Vector3 forceDir = GetKnockbackDirection(type);
+                    movement.AddPush(forceDir, data.knockbackForce);
+                }
             }
             else
             {
@@ -130,6 +158,43 @@ public class PlayerMeleeCombat : NetworkBehaviour
 
             _hitBuffer[i] = null;
         }
+    }
+
+    private bool CanHitPlayer(NetworkObject targetNetworkObject)
+    {
+        if (targetNetworkObject == null) return false;
+
+        switch (pvpMode)
+        {
+            case PvPMode.Disabled:
+                return false;
+
+            case PvPMode.TeamBased:
+                if (allowFriendlyFire) return true;
+
+                if (TryGetTeamId(NetworkObject, out int myTeam) &&
+                    TryGetTeamId(targetNetworkObject, out int targetTeam) &&
+                    myTeam == targetTeam)
+                {
+                    return false;
+                }
+                return true;
+
+            default:
+                return true;
+        }
+    }
+
+    private static bool TryGetTeamId(NetworkObject networkObject, out int teamId)
+    {
+        teamId = InvalidTeamId;
+        if (networkObject == null) return false;
+
+        var teamProvider = networkObject.GetComponent<ITeamProvider>();
+        if (teamProvider == null) return false;
+
+        teamId = teamProvider.TeamId;
+        return true;
     }
 
     private Vector3 GetKnockbackDirection(AttackType type)
@@ -177,4 +242,9 @@ public class PlayerMeleeCombat : NetworkBehaviour
 public interface IDamageable
 {
     void TakeDamage(float amount);
+}
+
+public interface ITeamProvider
+{
+    int TeamId { get; }
 }
