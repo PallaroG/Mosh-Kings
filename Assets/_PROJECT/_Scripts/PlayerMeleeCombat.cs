@@ -45,6 +45,7 @@ public class PlayerMeleeCombat : NetworkBehaviour
     private readonly Collider[] _hitBuffer = new Collider[32];
     private readonly HashSet<Collider> _alreadyHit = new();
     private readonly HashSet<ulong> _alreadyHitPlayers = new();
+    private const int InvalidTeamId = -1;
 
     private void Update()
     {
@@ -123,12 +124,9 @@ public class PlayerMeleeCombat : NetworkBehaviour
                 var targetNetworkObject = stamina.GetComponent<NetworkObject>();
                 if (!CanHitPlayer(targetNetworkObject)) continue;
 
-                if (singleHitPerSwing)
-                {
-                    ulong playerId = targetNetworkObject.NetworkObjectId;
-                    if (_alreadyHitPlayers.Contains(playerId)) continue;
-                    _alreadyHitPlayers.Add(playerId);
-                }
+                ulong playerId = targetNetworkObject.NetworkObjectId;
+                if (_alreadyHitPlayers.Contains(playerId)) continue;
+                _alreadyHitPlayers.Add(playerId);
 
                 stamina.ReceivePushDamage(data.damage);
 
@@ -160,6 +158,7 @@ public class PlayerMeleeCombat : NetworkBehaviour
     private bool CanHitPlayer(NetworkObject targetNetworkObject)
     {
         if (targetNetworkObject == null) return false;
+        // Checagem defensiva para evitar auto-hit em cenários fora do fluxo principal.
         if (targetNetworkObject.NetworkObjectId == NetworkObjectId) return false;
 
         switch (pvpMode)
@@ -185,7 +184,7 @@ public class PlayerMeleeCombat : NetworkBehaviour
 
     private static bool TryGetTeamId(NetworkObject networkObject, out int teamId)
     {
-        teamId = -1;
+        teamId = InvalidTeamId;
         if (networkObject == null) return false;
 
         var teamProvider = networkObject.GetComponent<ITeamProvider>();
