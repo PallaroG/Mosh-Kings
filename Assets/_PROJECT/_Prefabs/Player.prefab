@@ -591,7 +591,7 @@ MonoBehaviour:
   playerCamera: {fileID: 6892887412075408820}
   hitMask:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 65
   singleHitPerSwing: 1
   straight:
     animationTrigger: AttackStraight
