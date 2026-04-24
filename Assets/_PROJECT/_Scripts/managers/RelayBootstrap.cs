@@ -8,19 +8,36 @@ using Unity.Services.Authentication;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using Unity.Networking.Transport.Relay;
+using UnityEngine.SceneManagement;
 
 public class RelayBootstrap : MonoBehaviour
 {
+    // Singleton para acessarmos facilmente de outras cenas
+    public static RelayBootstrap Instance { get; private set; }
+
     [SerializeField] private NetworkManager networkManager;
     [SerializeField] private UnityTransport unityTransport;
     [SerializeField] private int maxConnections = 8;
+    [SerializeField] private string nomeDaCenaDoJogo = "lobby"; // Nome da sua cena
 
     public string LastJoinCode { get; private set; }
 
     private async void Awake()
     {
+        // Configuração do Singleton
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+
         if (networkManager == null) networkManager = FindAnyObjectByType<NetworkManager>();
         if (unityTransport == null) unityTransport = FindAnyObjectByType<UnityTransport>();
+        
+        DontDestroyOnLoad(gameObject);
+        if (networkManager != null) DontDestroyOnLoad(networkManager.gameObject);
+        
         await EnsureInitialized();
     }
 
@@ -33,13 +50,23 @@ public class RelayBootstrap : MonoBehaviour
             Allocation allocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
             LastJoinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
 
-            // A correção real: usar o método de extensão ToRelayServerData, sem instanciar a classe
             var relayServerData = allocation.ToRelayServerData("dtls");
             unityTransport.SetRelayServerData(relayServerData);
 
-            Debug.Log(networkManager.StartHost()
-                ? $"[Relay] Host iniciado. JoinCode: {LastJoinCode}"
-                : "[Relay] Falha ao iniciar host.");
+            if (networkManager.StartHost())
+            {
+                Debug.Log($"[Relay] Host iniciado. JoinCode: {LastJoinCode}");
+                GUIUtility.systemCopyBuffer = LastJoinCode; 
+
+                // AGUARDA MEIO SEGUNDO para o Netcode estabilizar antes de mudar de cena
+                await Task.Delay(500);
+
+                networkManager.SceneManager.LoadScene(nomeDaCenaDoJogo, LoadSceneMode.Single);
+            }
+            else
+            {
+                Debug.Log("[Relay] Falha ao iniciar host.");
+            }
         }
         catch (Exception e)
         {
@@ -49,28 +76,28 @@ public class RelayBootstrap : MonoBehaviour
 
     public async void JoinWithRelay(string joinCode)
     {
-        // 1. Trava de segurança: impede de rodar se o texto for nulo ou vazio
-        if (string.IsNullOrWhiteSpace(joinCode))
-        {
-            Debug.LogWarning("[Relay] Operação cancelada: Você tentou entrar, mas o código da sala está vazio!");
-            return; 
-        }
+        if (string.IsNullOrWhiteSpace(joinCode)) return; 
 
         try
         {
             await EnsureInitialized();
-
-            // Formata o código para garantir que não tenha espaços acidentais no começo ou fim
             joinCode = joinCode.Trim().ToUpperInvariant();
 
             JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
-
             var relayServerData = joinAllocation.ToRelayServerData("dtls");
             unityTransport.SetRelayServerData(relayServerData);
 
-            Debug.Log(networkManager.StartClient()
-                ? $"[Relay] Client conectado com code: {joinCode}"
-                : "[Relay] Falha ao iniciar client.");
+            // Salva o código localmente para o client poder visualizar também
+            LastJoinCode = joinCode;
+
+            if (networkManager.StartClient())
+            {
+                Debug.Log($"[Relay] Client conectado com code: {joinCode}");
+            }
+            else
+            {
+                Debug.Log("[Relay] Falha ao iniciar client.");
+            }
         }
         catch (Exception e)
         {
