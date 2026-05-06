@@ -1,0 +1,48 @@
+Resumo da conversa – Unity Relay + NGO
+
+1) NetworkObject na câmera
+- Não é recomendado colocar NetworkObject na câmera filha.
+- O correto é o NetworkObject no root do player.
+- A câmera deve ser filha e ativada apenas pelo owner.
+
+2) Relay e conexões fora da LAN
+- Para jogar em PCs diferentes via internet, é necessário Relay ou port forwarding.
+- Relay é a forma mais simples (sem abrir portas).
+
+3) Pacotes necessários
+- NGO (Netcode for GameObjects)
+- Unity Transport
+- Unity Relay
+- Unity Authentication
+
+4) Script RelayBootstrap (fluxo correto)
+- Inicializa UnityServices
+- Autentica anonimamente
+- Cria/entra em Allocation
+- Usa ToRelayServerData("dtls")
+- StartHost / StartClient
+
+5) Erros encontrados e soluções
+- CS0234 / UnityTransport errado: usar Unity.Netcode.Transports.UTP
+- Conflito RelayService (CS0433): remover Unity Services Multiplayer ou usar alias
+- RelayAllocationUtils ausente: usar AllocationUtils ou SetRelayServerData manual
+- CS1729 (new RelayServerData): usar allocation.ToRelayServerData("dtls")
+- ArgumentNullException JoinCode: validar string vazia antes de JoinAllocationAsync
+
+6) UI correta para Join/Host
+- Botão Host chama RelayMenuUI.OnClickHost
+- Botão Join chama RelayMenuUI.OnClickJoin
+- Join Code não vem do botão; vem do InputField
+- Script RelayMenuUI é a ponte entre InputField e RelayBootstrap
+
+7) Uso correto dos campos UI
+- joinCodeInput = InputField onde o jogador digita
+- joinCodeOutput = Text que mostra o código do Host
+
+8) Multiplayer Play Mode
+- Host gera código
+- Client cola o código no InputField
+- Só depois clica Join
+
+Conclusão:
+Com o RelayBootstrap correto + UI correta, o fluxo Host/Join funciona para multiplayer via internet sem abrir portas.

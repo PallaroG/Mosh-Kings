@@ -1,0 +1,239 @@
+# Mosh Kings — GAME DESIGN CONTEXT
+
+Este documento define o comportamento e identidade do jogo.
+Toda implementação deve respeitar estas regras.
+
+---
+
+# 🎮 VISÃO DO JOGO
+
+Mosh Kings é um jogo multiplayer em primeira pessoa, onde jogadores participam de uma roda punk (mosh pit) caótica durante músicas de rock.
+
+O jogo NÃO é sobre combate tradicional.
+
+O jogo é sobre:
+
+* sobrevivência no caos
+* empurrões
+* posicionamento
+* interação com o ambiente
+
+---
+
+# 🧠 ESTRUTURA TÉCNICA VISUAL
+
+* Câmera: Primeira pessoa
+* Personagens: Sprites 2D
+* Cenários: 3D
+
+O jogo é um híbrido 2.5D em primeira pessoa.
+
+---
+
+# 🔁 CORE LOOP
+
+1. Jogadores entram no lobby
+2. Votam em mapas/música
+3. Rodada começa (com música)
+4. Jogadores entram no mosh
+5. Sistema de caos ativa
+6. Jogadores sobrevivem ou são eliminados
+7. Sobreviventes ganham pontos
+8. Próxima rodada
+
+---
+
+# 🎵 SISTEMA DE RODADAS
+
+* Cada rodada dura aproximadamente 5 minutos
+* Cada rodada = uma música
+* Sobreviveu → ganha 1 ponto
+* Rodadas têm alta rotatividade
+
+---
+
+# ⚔️ COMBATE
+
+## Conceito
+
+* Combate simples e físico
+* Foco em impacto e caos
+* Não é técnico (não é fighting game)
+
+## Mecânicas
+
+* Socos (clique esquerdo/direito)
+* Empurrão físico
+* Uso de armas
+* Corrida + impacto
+
+---
+
+# ⚡ SISTEMA DE VIDA (STAMINA)
+
+* Vida = cansaço
+* Jogador não “morre” tradicionalmente ele tem 3 barras de cansaço
+* Jogador exausto é expulso do mosh
+* Pode voltar caso tenha barras de cansaço sobrando
+* Se não tiver barras de cansaço, fora da rodada
+
+---
+
+# 💥 EMPURRÃO (CORE DO JOGO)
+
+* Principal mecânica
+* Deve ser:
+
+  * forte
+  * responsivo
+  * previsível dentro do caos
+
+Evitar:
+
+* forças descontroladas
+* perda total de controle do player
+
+---
+
+# 🎲 SISTEMAS DE CAOS
+
+Durante a rodada podem acontecer:
+
+## Eventos de Mosh
+
+* buffs
+* armas
+* pontos extras
+
+## Sinalizador
+
+* jogador ganha velocidade
+* se manter até o fim → ganha pontos
+
+## Crowd Surf
+
+* ganha pontos
+* reduz cansaço
+
+## Vingança
+
+* jogador marcado
+* ganha velocidade para alcançar alvo
+
+---
+
+# 🧃 BUFFS E ITENS
+
+## Buffs (NPCs)
+
+* velocidade
+* cura
+* efeitos temporários
+
+## Itens de cura
+
+* drinks (vodka, caipirinha, etc)
+* reduzem cansaço
+
+## Efeitos especiais
+
+* cigarro → ignora knockback temporariamente
+* depois gera efeito negativo (poça)
+
+---
+
+# 🔫 ARMAS
+
+## Tipos
+
+* armas brancas
+* arremesso
+* improvisadas
+
+## Exemplos
+
+* garrafa
+* katana guarda-chuva
+* canivete
+* soco inglês
+* estilingue
+
+Regras:
+
+* apenas 1 arma por vez
+* armas vêm de NPCs ou eventos
+
+---
+
+# 👥 PERSONAGENS
+
+## Arquétipos
+
+Tank:
+
+* lento
+* forte
+* dano em área ao usar habilidade
+
+Speed:
+
+* rápido
+* ganha força com movimento ao usar habilidade, quanto mais rápido estiver, mais dano seu soco dá
+
+Attack:
+
+* dano alto
+* habilidade se resume em dar uma ombrada que gruda um jogador e prende ele em alguma parede
+
+Outros:
+
+* habilidades únicas (ex: stun, buff, dash)
+
+---
+
+# 🌐 MULTIPLAYER
+
+* foco em gameplay caótico
+* feedback deve ser responsivo
+* servidor valida estados importantes
+* cliente pode ter feedback local
+
+---
+
+# 🎤 FEATURES IMPORTANTES
+
+* chat de voz por proximidade
+* lobby com votação
+* mapas ligados à música
+* NPCs interativos
+
+---
+
+# 🎯 OBJETIVO DO JOGO
+
+Ser o último sobrevivente do mosh e acumular mais pontos ao longo das rodadas.
+
+---
+
+# 🚫 O QUE NÃO FAZER
+
+* Não transformar em jogo de vida tradicional
+* Não deixar combate técnico demais
+* Não reduzir o caos do jogo
+* Não adicionar complexidade desnecessária
+* Não quebrar o ritmo rápido
+
+---
+
+# 🧠 REGRAS PARA IA
+
+* Sempre priorizar o design sobre a implementação
+* Se houver conflito entre código e gameplay, avisar
+* Manter o jogo rápido, caótico e legível
+* Nunca transformar o jogo em algo genérico
+
+---
+
+# 🎯 ESSÊNCIA
+
+"Mosh Kings é caos controlado com propósito."

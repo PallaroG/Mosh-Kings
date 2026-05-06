@@ -6,7 +6,10 @@ public class EnemyPushDamage : MonoBehaviour
     [Header("Dano por empurrão")]
     [SerializeField] private float basePushDamage = 8f;      // configurável por inimigo
     [SerializeField] private float impactMultiplier = 0.15f; // escala com impacto
+    [SerializeField] private PushPreset pushPreset = PushPreset.Custom;
     [SerializeField] private float pushForce = 6f;           // força aplicada no player
+    [SerializeField] private float impactPushMultiplier = 0.08f;
+    [SerializeField] private float maxImpactPushBonus = 3f;
     [SerializeField] private float hitCooldown = 0.35f;      // evita dano por frame
 
     private float lastHitTime = -999f;
@@ -52,9 +55,19 @@ public class EnemyPushDamage : MonoBehaviour
         // Empurrão no CharacterController via velocidade externa
         if (movement != null)
         {
-            movement.AddPush(dir, pushForce);
+            movement.AddPush(dir, GetPushForce(movement, impact));
         }
 
         lastHitTime = Time.time;
+    }
+
+    private float GetPushForce(MovementPlayer movement, float impact)
+    {
+        float baseForce = pushPreset == PushPreset.Custom || movement == null
+            ? pushForce
+            : movement.GetPushForce(pushPreset);
+
+        float impactBonus = Mathf.Min(impact * impactPushMultiplier, maxImpactPushBonus);
+        return baseForce + impactBonus;
     }
 }

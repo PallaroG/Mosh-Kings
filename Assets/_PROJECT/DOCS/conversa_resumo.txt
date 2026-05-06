@@ -1,0 +1,85 @@
+Resumo da conversa — Sistema de cansaço (stamina), empurrão e hitstop
+
+1) Objetivo inicial
+- Criar um sistema de “barra de vida” que na verdade é cansaço (stamina).
+- Cansaço diminui quando o jogador é empurrado por inimigos.
+- Dano baseado na força/impacto do empurrão.
+- Cada inimigo tem dano configurável.
+- Jogador tem valor máximo de cansaço configurável.
+- UI atualiza em tempo real.
+- Separação clara de responsabilidades.
+
+2) Estrutura recomendada
+- PlayerStamina.cs: guarda stamina atual/máxima, recebe dano e notifica UI.
+- EnemyPushDamage.cs: detecta contato, calcula dano e chama empurrão no player.
+- StaminaBarUI.cs: atualiza a barra (Slider/Image) via evento.
+
+3) Erros de compilação
+- Erros CS1061 (métodos/eventos não encontrados):
+  - ReceivePushDamage, OnStaminaChanged, CurrentStamina, MaxStamina
+- Causa: nomes no PlayerStamina não batiam com os scripts.
+- Solução: padronizar nomes em PlayerStamina (ou atualizar chamadas).
+
+4) Empurrão com CharacterController
+- Uso de força externa no MovimentPlayer (externalVelocity).
+- Empurrão simulado com:
+  - externalTargetVelocity (alvo do empurrão)
+  - externalVelocity (velocidade real)
+- AddPush(direction, force) soma impulso no alvo.
+- externalVelocity corre atrás do alvo com externalAcceleration.
+- alvo volta para zero com externalDeceleration.
+- Movimento final = velocidade do input + velocidade externa.
+
+5) Alterações aplicadas nos scripts
+- EnemyPushDamage.cs:
+  - Calcula dano base + impacto.
+  - Aplica stamina.ReceivePushDamage(dano).
+  - Chama movement.AddPush(dir, pushForce).
+- MovimentPlayer.cs:
+  - Adiciona campos de forças externas.
+  - Método AddPush.
+  - Aceleração/desaceleração do empurrão no HandleMovement.
+
+6) Problema de rotação no player/câmera
+- Causa: Player com CharacterController + Rigidbody ao mesmo tempo.
+- Solução:
+  - Remover Rigidbody do Player (recomendado).
+  - Se mantiver: isKinematic = true e Use Gravity = false.
+- Inimigo pode ter Rigidbody, mas kinematic recomendado.
+
+7) Explicação detalhada do EnemyPushDamage
+- Detecta contato via OnCollisionStay ou OnTriggerStay.
+- Usa cooldown para evitar dano por frame.
+- Calcula dano por impacto:
+  finalDamage = basePushDamage + impact * impactMultiplier.
+- Aplica dano via stamina.ReceivePushDamage().
+- Empurra via movement.AddPush().
+- Direção: inimigo -> player no plano XZ.
+
+8) Explicação detalhada do empurrão no MovimentPlayer
+- externalTargetVelocity recebe impulso.
+- externalVelocity vai “correndo” atrás do alvo.
+- Alvo volta a zero com decaimento.
+- Resultado: tranco + escorregamento controlado.
+- Parâmetros:
+  - External Acceleration: entrada do empurrão (mais alto = tranco seco).
+  - External Deceleration: quanto o empurrão dura (mais alto = acaba rápido).
+  - Max External Speed: limite do empurrão acumulado.
+
+9) Pergunta sobre hitstop
+- Hitstop não é obrigatório para tudo.
+- É ferramenta de impacto/clareza.
+- Jogador: quase sempre vale usar (hit confirmado).
+- Inimigos: depende do design e ritmo.
+
+10) Recomendações para multiplayer com muitos inimigos
+- Evitar hitstop global (causa lag/desync e quebra o ritmo).
+- Usar hitstop local (client-side) somente no atacante.
+- No alvo: usar reação (stagger, animação, knockback).
+- Hitstop global apenas em eventos raros (crítico, boss, parry).
+- Rate limit para hitstop (ex. 120–200ms entre ativações).
+- Em multiplayer:
+  - servidor valida hit e aplica estados
+  - cliente aplica feedback visual/sonoro.
+
+Fim do resumo.

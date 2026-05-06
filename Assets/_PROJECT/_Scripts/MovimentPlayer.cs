@@ -1,5 +1,14 @@
 using UnityEngine;
 using Unity.Netcode;
+using UnityEngine.Serialization;
+
+public enum PushPreset
+{
+    Custom,
+    Light,
+    Medium,
+    Heavy
+}
 
 [RequireComponent(typeof(CharacterController))]
 [RequireComponent(typeof(NetworkObject))]
@@ -11,8 +20,10 @@ public class MovementPlayer : NetworkBehaviour
     [Header("Movimento")]
     [SerializeField] private float walkSpeed = 4.5f;
     [SerializeField] private float sprintSpeed = 7.5f;
-    [SerializeField] private float acceleration = 14f;
-    [SerializeField] private float deceleration = 18f;
+    [SerializeField] private float inputResponsiveness = 55f;
+    [SerializeField] private float stopResponsiveness = 85f;
+    [SerializeField] private float directionChangeResponsiveness = 95f;
+    [SerializeField] private float sprintRampTime = 0.12f;
     [SerializeField] private float airControlPercent = 0.35f;
 
     [Header("Pulo / Gravidade")]
@@ -22,9 +33,20 @@ public class MovementPlayer : NetworkBehaviour
     [SerializeField] private float groundedStickForce = -2f;
 
     [Header("Forças Externas (Empurrão)")]
-    [SerializeField] private float externalAcceleration = 30f;
-    [SerializeField] private float externalDeceleration = 20f;
-    [SerializeField] private float maxExternalSpeed = 10f;
+    [SerializeField] private float externalAcceleration = 42f;
+    [SerializeField] private float externalDeceleration = 16f;
+    [SerializeField] private float maxExternalSpeed = 13f;
+    [SerializeField, Range(0f, 1f)] private float immediatePushPercent = 0.55f;
+    [FormerlySerializedAs("minControlWhilePushed")]
+    [SerializeField, Range(0f, 1f)] private float pushControlMultiplier = 0.35f;
+    [SerializeField] private float controlRecoverySpeed = 4.5f;
+    [SerializeField] private float pushedControlThreshold = 0.35f;
+    [SerializeField] private float externalStopThreshold = 0.05f;
+
+    [Header("Presets de Empurrão")]
+    [SerializeField] private float lightPushForce = 4f;
+    [SerializeField] private float mediumPushForce = 7.5f;
+    [SerializeField] private float heavyPushForce = 12f;
 
     [Header("Input")]
     [SerializeField] private KeyCode sprintKey = KeyCode.LeftShift;
@@ -32,10 +54,12 @@ public class MovementPlayer : NetworkBehaviour
 
     private CharacterController controller;
     private Vector3 horizontalVelocity;
+    private float sprintBlend;
     private float verticalVelocity;
 
     private Vector3 externalVelocity;
     private Vector3 externalTargetVelocity;
+    private float inputControlMultiplier = 1f;
 
     // Sincronização básica de transform (caso você não esteja usando NetworkTransform)
     private NetworkVariable<Vector3> netPosition = new(
@@ -90,28 +114,85 @@ public class MovementPlayer : NetworkBehaviour
 
         if (IsServer)
         {
-            ApplyPush(direction, force);
+            ApplyPushLocal(direction, force);
+            SendPushToOwnerClient(direction, force);
         }
         else
         {
-            AddPushServerRpc(direction, force);
+            if (IsOwner)
+            {
+                ApplyPushLocal(direction, force);
+                AddPushServerRpc(direction, force);
+            }
         }
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void AddPushServerRpc(Vector3 direction, float force)
+    public void AddPush(Vector3 direction, PushPreset preset)
     {
-        ApplyPush(direction, force);
+        AddPush(direction, GetPushForce(preset));
     }
 
-    private void ApplyPush(Vector3 direction, float force)
+    public float GetPushForce(PushPreset preset)
+    {
+        return preset switch
+        {
+            PushPreset.Light => lightPushForce,
+            PushPreset.Heavy => heavyPushForce,
+            _ => mediumPushForce
+        };
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void AddPushServerRpc(Vector3 direction, float force, ServerRpcParams rpcParams = default)
+    {
+        ApplyPushLocal(direction, force);
+
+        // Future server validation should clamp/approve direction and force here before echoing.
+        SendPushToOwnerClient(direction, force, rpcParams.Receive.SenderClientId);
+    }
+
+    [ClientRpc]
+    private void ApplyPushClientRpc(Vector3 direction, float force, ClientRpcParams clientRpcParams = default)
+    {
+        if (!IsOwner) return;
+        ApplyPushLocal(direction, force);
+    }
+
+    private void SendPushToOwnerClient(Vector3 direction, float force, ulong skipClientId = ulong.MaxValue)
+    {
+        if (!IsSpawned) return;
+        if (OwnerClientId == NetworkManager.ServerClientId) return;
+        if (OwnerClientId == skipClientId) return;
+
+        var clientRpcParams = new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new[] { OwnerClientId }
+            }
+        };
+
+        ApplyPushClientRpc(direction, force, clientRpcParams);
+    }
+
+    private void ApplyPushLocal(Vector3 direction, float force)
     {
         direction.y = 0f;
         if (direction.sqrMagnitude < 0.0001f) return;
 
         direction.Normalize();
-        externalTargetVelocity += direction * force;
+        Vector3 impulse = direction * force;
+        Vector3 immediateVelocity = impulse * immediatePushPercent;
+        Vector3 glideVelocity = impulse * (1f - immediatePushPercent);
+
+        externalVelocity += immediateVelocity;
+        externalTargetVelocity += glideVelocity;
+        externalVelocity = Vector3.ClampMagnitude(externalVelocity, maxExternalSpeed);
         externalTargetVelocity = Vector3.ClampMagnitude(externalTargetVelocity, maxExternalSpeed);
+
+        float forcePercent = Mathf.Clamp01(force / Mathf.Max(maxExternalSpeed, 0.01f));
+        float pushedControl = Mathf.Lerp(1f, pushControlMultiplier, forcePercent);
+        inputControlMultiplier = Mathf.Min(inputControlMultiplier, pushedControl);
     }
 
     [ServerRpc]
@@ -134,19 +215,74 @@ public class MovementPlayer : NetworkBehaviour
         forward.Normalize();
         right.Normalize();
 
-        Vector3 desiredMove = (forward * input.y + right * input.x);
+        RecoverInputControl();
+        UpdateExternalVelocity();
 
-        bool isSprinting = Input.GetKey(sprintKey);
-        float targetSpeed = isSprinting ? sprintSpeed : walkSpeed;
-        Vector3 targetVelocity = desiredMove * targetSpeed;
+        Vector3 inputDirection = GetInputDirection(input, forward, right);
+        bool hasInput = inputDirection.sqrMagnitude > 0.0001f;
+        float targetSpeed = GetSprintAdjustedSpeed(hasInput);
+        float control = (controller.isGrounded ? 1f : airControlPercent) * GetCurrentInputControl();
 
-        float control = controller.isGrounded ? 1f : airControlPercent;
-        float accelRate = (targetVelocity.sqrMagnitude > 0.01f) ? acceleration : deceleration;
-        horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity, accelRate * control * Time.deltaTime);
+        UpdateInputVelocity(inputDirection, targetSpeed, control);
+        UpdateGravity();
 
-        externalVelocity = Vector3.MoveTowards(externalVelocity, externalTargetVelocity, externalAcceleration * Time.deltaTime);
-        externalTargetVelocity = Vector3.MoveTowards(externalTargetVelocity, Vector3.zero, externalDeceleration * Time.deltaTime);
+        Vector3 finalVelocity = horizontalVelocity + externalVelocity;
+        finalVelocity.y = verticalVelocity;
 
+        controller.Move(finalVelocity * Time.deltaTime);
+    }
+
+    private Vector3 GetInputDirection(Vector2 input, Vector3 forward, Vector3 right)
+    {
+        Vector3 desiredMove = forward * input.y + right * input.x;
+        desiredMove.y = 0f;
+
+        if (desiredMove.sqrMagnitude < 0.0001f)
+            return Vector3.zero;
+
+        return desiredMove.normalized;
+    }
+
+    private float GetSprintAdjustedSpeed(bool hasInput)
+    {
+        bool wantsSprint = hasInput && Input.GetKey(sprintKey);
+        float rampTime = Mathf.Max(sprintRampTime, 0.001f);
+        float sprintTarget = wantsSprint ? 1f : 0f;
+        float sprintRate = (wantsSprint ? 1f / rampTime : 12f) * Time.deltaTime;
+
+        sprintBlend = Mathf.MoveTowards(sprintBlend, sprintTarget, sprintRate);
+        return Mathf.Lerp(walkSpeed, sprintSpeed, sprintBlend);
+    }
+
+    private void UpdateInputVelocity(Vector3 inputDirection, float targetSpeed, float control)
+    {
+        if (inputDirection.sqrMagnitude < 0.0001f)
+        {
+            horizontalVelocity = Vector3.MoveTowards(
+                horizontalVelocity,
+                Vector3.zero,
+                stopResponsiveness * control * Time.deltaTime);
+            return;
+        }
+
+        Vector3 targetVelocity = inputDirection * targetSpeed;
+        float responsiveness = inputResponsiveness;
+
+        if (horizontalVelocity.sqrMagnitude > 0.0001f)
+        {
+            float directionDot = Vector3.Dot(horizontalVelocity.normalized, inputDirection);
+            if (directionDot < 0.65f)
+                responsiveness = directionChangeResponsiveness;
+        }
+
+        horizontalVelocity = Vector3.MoveTowards(
+            horizontalVelocity,
+            targetVelocity,
+            responsiveness * control * Time.deltaTime);
+    }
+
+    private void UpdateGravity()
+    {
         if (controller.isGrounded)
         {
             if (verticalVelocity < 0f) verticalVelocity = groundedStickForce;
@@ -156,10 +292,30 @@ public class MovementPlayer : NetworkBehaviour
         }
 
         verticalVelocity += gravity * Time.deltaTime;
+    }
 
-        Vector3 finalVelocity = horizontalVelocity + externalVelocity;
-        finalVelocity.y = verticalVelocity;
+    private void UpdateExternalVelocity()
+    {
+        externalTargetVelocity = Vector3.MoveTowards(externalTargetVelocity, Vector3.zero, externalDeceleration * Time.deltaTime);
+        externalVelocity = Vector3.MoveTowards(externalVelocity, externalTargetVelocity, externalAcceleration * Time.deltaTime);
 
-        controller.Move(finalVelocity * Time.deltaTime);
+        if (externalVelocity.sqrMagnitude <= externalStopThreshold * externalStopThreshold)
+            externalVelocity = Vector3.zero;
+
+        if (externalTargetVelocity.sqrMagnitude <= externalStopThreshold * externalStopThreshold)
+            externalTargetVelocity = Vector3.zero;
+    }
+
+    private void RecoverInputControl()
+    {
+        inputControlMultiplier = Mathf.MoveTowards(inputControlMultiplier, 1f, controlRecoverySpeed * Time.deltaTime);
+    }
+
+    private float GetCurrentInputControl()
+    {
+        if (externalVelocity.magnitude < pushedControlThreshold)
+            return 1f;
+
+        return inputControlMultiplier;
     }
 }

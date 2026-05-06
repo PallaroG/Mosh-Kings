@@ -15,6 +15,7 @@ public class PlayerMeleeCombat : NetworkBehaviour
 
         [Header("Combat")]
         public float damage;
+        public PushPreset pushPreset;
         public float knockbackForce;
         public Vector3 halfExtents;
         public Vector3 localOffset;
@@ -122,6 +123,8 @@ public class PlayerMeleeCombat : NetworkBehaviour
             _alreadyHit.Add(col);
 
             var stamina = col.GetComponentInParent<PlayerStamina>();
+            bool appliedCharacterPush = false;
+
             if (stamina != null)
             {
                 if (targetNetworkObject == null)
@@ -139,7 +142,8 @@ public class PlayerMeleeCombat : NetworkBehaviour
                 if (movement != null)
                 {
                     Vector3 forceDir = GetKnockbackDirection(type);
-                    movement.AddPush(forceDir, data.knockbackForce);
+                    movement.AddPush(forceDir, GetKnockbackForce(movement, data));
+                    appliedCharacterPush = true;
                 }
             }
             else
@@ -147,13 +151,21 @@ public class PlayerMeleeCombat : NetworkBehaviour
                 var damageable = col.GetComponentInParent<IDamageable>();
                 if (damageable != null) damageable.TakeDamage(data.damage);
                 else col.transform.root.SendMessage("TakeDamage", data.damage, SendMessageOptions.DontRequireReceiver);
+
+                var movement = col.GetComponentInParent<MovementPlayer>();
+                if (movement != null)
+                {
+                    Vector3 forceDir = GetKnockbackDirection(type);
+                    movement.AddPush(forceDir, GetKnockbackForce(movement, data));
+                    appliedCharacterPush = true;
+                }
             }
 
             Rigidbody rb = col.attachedRigidbody;
-            if (rb != null && !rb.isKinematic)
+            if (!appliedCharacterPush && rb != null && !rb.isKinematic)
             {
                 Vector3 forceDir = GetKnockbackDirection(type);
-                rb.AddForce(forceDir * data.knockbackForce, ForceMode.Impulse);
+                rb.AddForce(forceDir * GetKnockbackForce(null, data), ForceMode.Impulse);
             }
 
             _hitBuffer[i] = null;
@@ -217,6 +229,14 @@ public class PlayerMeleeCombat : NetworkBehaviour
             AttackType.Uppercut => uppercut,
             _ => straight
         };
+    }
+
+    private static float GetKnockbackForce(MovementPlayer movement, AttackData data)
+    {
+        if (data.pushPreset != PushPreset.Custom && movement != null)
+            return movement.GetPushForce(data.pushPreset);
+
+        return data.knockbackForce;
     }
 
     private void OnDrawGizmos()

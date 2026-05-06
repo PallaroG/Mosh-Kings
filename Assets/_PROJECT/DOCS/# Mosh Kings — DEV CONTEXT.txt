@@ -1,0 +1,231 @@
+# Mosh Kings — DEV CONTEXT
+
+Este documento define o funcionamento esperado do projeto.
+Qualquer alteração deve respeitar estas regras.
+
+---
+
+# 🎮 VISÃO GERAL
+
+Projeto Unity (URP) com:
+
+* Multiplayer usando Netcode for GameObjects (NGO)
+* Conexão via Unity Relay
+* Gameplay baseado em stamina (não vida)
+* Sistema físico de empurrão (knockback)
+* Fluxo de cenas com loading intermediário
+
+---
+
+# 🌐 MULTIPLAYER (NGO + RELAY)
+
+## Arquitetura
+
+* Usa Netcode for GameObjects (NGO)
+* Transporte: Unity Transport
+* Conexão via Unity Relay (sem port forwarding)
+* Autenticação anônima com Unity Services
+* NetworkManager único e persistente (DontDestroyOnLoad)
+
+## Fluxo correto
+
+Host:
+
+1. Inicializa Unity Services
+2. Autentica anonimamente
+3. Cria Relay Allocation
+4. Gera Join Code
+5. StartHost()
+
+Client:
+
+1. Inicializa Unity Services
+2. Autentica anonimamente
+3. Usa Join Code
+4. JoinAllocationAsync()
+5. StartClient()
+
+## UI
+
+* joinCodeInput → InputField (entrada do código)
+* joinCodeOutput → Text (mostra código do host)
+
+Botões:
+
+* Host → cria sessão
+* Join → entra com código digitado
+
+## Regras importantes
+
+* NÃO usar NetworkObject na câmera
+* NetworkObject deve estar no root do Player
+* Apenas o owner ativa sua câmera local
+* Validar Join Code antes de usar
+
+---
+
+# 🎬 FLUXO DE CENAS
+
+## Estrutura
+
+Menu → Loading → Lobby
+
+## Regras
+
+* NetworkManager persiste entre cenas
+* Enable Scene Management deve estar ativo
+* Lobby NÃO deve ter NetworkManager duplicado
+* Lobby NÃO deve ter câmera fixa
+
+## Loading Scene
+
+Responsável por:
+
+* Iniciar Host/Join
+* Aguardar conexão
+* Aguardar spawn do player
+* Fazer transição para Lobby
+* Controlar fade in/out
+
+## Problemas evitados
+
+* “No cameras rendering”
+* Player spawnando antes da cena carregar
+* Conflito de NetworkManager
+* Câmera travada no lobby
+
+---
+
+# ⚔️ GAMEPLAY (STAMINA + EMPURRÃO)
+
+## Conceito
+
+* Não existe "vida"
+* Sistema baseado em cansaço (stamina)
+
+## Estrutura de scripts
+
+PlayerStamina.cs:
+
+* Gerencia stamina atual e máxima
+* Recebe dano (ReceivePushDamage)
+* Notifica UI
+
+EnemyPushDamage.cs:
+
+* Detecta contato com player
+* Calcula dano por impacto
+* Aplica empurrão
+
+StaminaBarUI.cs:
+
+* Atualiza UI em tempo real
+
+## Regras
+
+* Separação clara de responsabilidades
+* UI não contém lógica de gameplay
+* Player não calcula dano diretamente
+
+---
+
+# 💥 SISTEMA DE EMPURRÃO
+
+## Implementação
+
+Baseado em CharacterController (sem Rigidbody no player)
+
+MovimentPlayer.cs:
+
+* externalTargetVelocity → alvo do empurrão
+* externalVelocity → velocidade real
+* AddPush(direction, force)
+
+## Funcionamento
+
+1. Impulso é adicionado ao target
+2. Velocity corre atrás do target
+3. Target desacelera até zero
+4. Resultado: tranco + escorregamento
+
+## Parâmetros
+
+* External Acceleration → intensidade do impacto
+* External Deceleration → duração do empurrão
+* Max External Speed → limite
+
+## Regras físicas
+
+* Player NÃO deve ter Rigidbody
+* Se tiver: usar isKinematic = true
+* Inimigos podem ter Rigidbody (preferência: kinematic)
+
+---
+
+# ⚡ HITSTOP (IMPACTO)
+
+## Uso recomendado
+
+* Player → usar (feedback de hit)
+* Inimigos → opcional
+
+## Multiplayer
+
+* NÃO usar hitstop global
+* Usar hitstop local (client-side)
+* Servidor valida dano
+* Cliente aplica feedback
+
+## Regras
+
+* Evitar spam de hitstop
+* Usar cooldown (~120–200ms)
+* Usar global apenas em eventos especiais (boss/parry)
+
+---
+
+# 🧠 REGRAS PARA IA (CODEX)
+
+## Permitido
+
+* Criar/editar scripts C#
+* Analisar código
+* Sugerir melhorias
+
+## Proibido (sem autorização explícita)
+
+* Alterar arquivos .unity
+* Alterar .prefab
+* Alterar .meta
+* Alterar .asset ou .mat
+* Modificar ProjectSettings
+* Modificar Packages
+* Alterar FMOD
+* Alterar setup de Netcode/Relay sem análise prévia
+
+## Processo obrigatório
+
+1. Analisar antes de implementar
+2. Explicar plano
+3. Implementar em etapas pequenas
+4. Listar arquivos alterados
+
+## Prioridades
+
+* Manter arquitetura atual
+* Evitar regressões
+* Não quebrar multiplayer
+* Não reintroduzir bugs já resolvidos
+
+---
+
+# 🎯 OBJETIVO FINAL
+
+* Multiplayer estável via Relay
+* Gameplay consistente com stamina + empurrão
+* Fluxo de cenas previsível
+* Código modular e seguro
+
+---
+
+Qualquer alteração deve respeitar este documento.

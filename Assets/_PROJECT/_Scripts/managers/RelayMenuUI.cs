@@ -1,10 +1,12 @@
 using UnityEngine;
 using TMPro; // Necessário para acessar os componentes TextMeshPro
+using UnityEngine.SceneManagement;
 
 public class RelayMenuUI : MonoBehaviour
 {
     [Header("Script Principal")]
     [SerializeField] private RelayBootstrap relayBootstrap;
+    [SerializeField] private string loadingSceneName = "Loading";
 
     [Header("Elementos da UI")]
     [SerializeField] private TMP_InputField joinCodeInput; // Arraste seu InputField aqui
@@ -30,6 +32,13 @@ public class RelayMenuUI : MonoBehaviour
         Invoke(nameof(RefreshHostCode), 1.0f); 
     }
 
+    public void OnClickHostViaLoading()
+    {
+        MultiplayerConnectionState.Instance.PrepareHost();
+        SetStatus("Preparando sala...");
+        SceneManager.LoadScene(loadingSceneName, LoadSceneMode.Single);
+    }
+
     // 2. LIGUE ESTA FUNÇÃO NO BOTÃO "JOIN"
     public void OnClickJoin()
     {
@@ -48,6 +57,23 @@ public class RelayMenuUI : MonoBehaviour
         
         // Manda o texto digitado pro script do servidor
         relayBootstrap.JoinWithRelay(typedCode);
+    }
+
+    public void OnClickJoinViaLoading()
+    {
+        if (joinCodeInput == null) return;
+
+        string typedCode = joinCodeInput.text.Trim().ToUpper();
+
+        if (string.IsNullOrWhiteSpace(typedCode))
+        {
+            SetStatus("Erro: Digite o código da sala primeiro!");
+            return;
+        }
+
+        MultiplayerConnectionState.Instance.PrepareClient(typedCode);
+        SetStatus($"Preparando entrada na sala {typedCode}...");
+        SceneManager.LoadScene(loadingSceneName, LoadSceneMode.Single);
     }
 
     // (Opcional) Ligue num botão "Copiar Código"

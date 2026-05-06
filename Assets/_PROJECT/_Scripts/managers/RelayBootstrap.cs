@@ -20,6 +20,16 @@ public class RelayBootstrap : MonoBehaviour
     [SerializeField] private int maxConnections = 8;
     [SerializeField] private string nomeDaCenaDoJogo = "lobby"; // Nome da sua cena
 
+    public string GameSceneName => nomeDaCenaDoJogo;
+    public NetworkManager CurrentNetworkManager
+    {
+        get
+        {
+            CacheReferences();
+            return networkManager;
+        }
+    }
+
     public string LastJoinCode { get; private set; }
 
     private async void Awake()
@@ -32,8 +42,7 @@ public class RelayBootstrap : MonoBehaviour
         }
         Instance = this;
 
-        if (networkManager == null) networkManager = FindAnyObjectByType<NetworkManager>();
-        if (unityTransport == null) unityTransport = FindAnyObjectByType<UnityTransport>();
+        CacheReferences();
         
         DontDestroyOnLoad(gameObject);
         if (networkManager != null) DontDestroyOnLoad(networkManager.gameObject);
@@ -41,10 +50,16 @@ public class RelayBootstrap : MonoBehaviour
         await EnsureInitialized();
     }
 
-    public async void HostWithRelay()
+    public void HostWithRelay()
+    {
+        _ = StartHostWithRelayAsync(loadGameSceneAfterStart: true);
+    }
+
+    public async Task<bool> StartHostWithRelayAsync(bool loadGameSceneAfterStart)
     {
         try
         {
+            CacheReferences();
             await EnsureInitialized();
 
             Allocation allocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
@@ -58,28 +73,45 @@ public class RelayBootstrap : MonoBehaviour
                 Debug.Log($"[Relay] Host iniciado. JoinCode: {LastJoinCode}");
                 GUIUtility.systemCopyBuffer = LastJoinCode; 
 
-                // AGUARDA MEIO SEGUNDO para o Netcode estabilizar antes de mudar de cena
-                await Task.Delay(500);
+                MultiplayerConnectionState.Instance.SetGeneratedJoinCode(LastJoinCode);
 
-                networkManager.SceneManager.LoadScene(nomeDaCenaDoJogo, LoadSceneMode.Single);
+                if (loadGameSceneAfterStart)
+                {
+                    // AGUARDA MEIO SEGUNDO para o Netcode estabilizar antes de mudar de cena
+                    await Task.Delay(500);
+                    networkManager.SceneManager.LoadScene(nomeDaCenaDoJogo, LoadSceneMode.Single);
+                }
+
+                return true;
             }
-            else
-            {
-                Debug.Log("[Relay] Falha ao iniciar host.");
-            }
+
+            Debug.Log("[Relay] Falha ao iniciar host.");
+            return false;
         }
         catch (Exception e)
         {
             Debug.LogError($"[Relay] HostWithRelay erro: {e}");
+            MultiplayerConnectionState.Instance.SetError(e.Message);
+            return false;
         }
     }
 
-    public async void JoinWithRelay(string joinCode)
+    public void JoinWithRelay(string joinCode)
     {
-        if (string.IsNullOrWhiteSpace(joinCode)) return; 
+        _ = StartClientWithRelayAsync(joinCode);
+    }
+
+    public async Task<bool> StartClientWithRelayAsync(string joinCode)
+    {
+        if (string.IsNullOrWhiteSpace(joinCode))
+        {
+            MultiplayerConnectionState.Instance.SetError("Join Code is empty.");
+            return false;
+        }
 
         try
         {
+            CacheReferences();
             await EnsureInitialized();
             joinCode = joinCode.Trim().ToUpperInvariant();
 
@@ -93,16 +125,24 @@ public class RelayBootstrap : MonoBehaviour
             if (networkManager.StartClient())
             {
                 Debug.Log($"[Relay] Client conectado com code: {joinCode}");
+                return true;
             }
-            else
-            {
-                Debug.Log("[Relay] Falha ao iniciar client.");
-            }
+
+            Debug.Log("[Relay] Falha ao iniciar client.");
+            return false;
         }
         catch (Exception e)
         {
             Debug.LogError($"[Relay] JoinWithRelay erro: {e}");
+            MultiplayerConnectionState.Instance.SetError(e.Message);
+            return false;
         }
+    }
+
+    private void CacheReferences()
+    {
+        if (networkManager == null) networkManager = FindAnyObjectByType<NetworkManager>();
+        if (unityTransport == null) unityTransport = FindAnyObjectByType<UnityTransport>();
     }
 
     private static async Task EnsureInitialized()

@@ -517,7 +517,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1674762848}
         m_TargetAssemblyTypeName: RelayMenuUI, Assembly-CSharp
-        m_MethodName: OnClickHost
+        m_MethodName: OnClickHostViaLoading
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1860,7 +1860,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1674762848}
         m_TargetAssemblyTypeName: RelayMenuUI, Assembly-CSharp
-        m_MethodName: OnClickJoin
+        m_MethodName: OnClickJoinViaLoading
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2186,6 +2186,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RelayMenuUI
   relayBootstrap: {fileID: 1147239812}
+  loadingSceneName: Loading
   joinCodeInput: {fileID: 343272827}
   joinCodeOutput: {fileID: 292325518}
   statusText: {fileID: 772283504}

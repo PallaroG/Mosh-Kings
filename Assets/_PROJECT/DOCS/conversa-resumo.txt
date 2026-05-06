@@ -1,0 +1,65 @@
+Resumo da conversa (Unity Multiplayer + Relay + Scene Loading)
+
+1) Problema inicial
+O usuário tinha um Player.prefab com Main Camera, mas no multiplayer (Relay) surgia o erro “No cameras rendering” quando não havia jogador na cena.
+
+2) Solução inicial sugerida
+Criar uma câmera de menu (MenuCamera) na cena inicial para evitar o erro, e desativá-la quando o player local spawnar.
+
+3) Retorno ao menu
+Ao sair do multiplayer, era necessário reativar a MenuCamera (ao destruir o player local), para evitar tela preta.
+
+4) Migração para duas cenas (Menu + Jogo)
+Foi sugerido usar duas cenas:
+- Menu (UI + NetworkManager + RelayBootstrap)
+- Jogo (mapa, luzes, inimigos)
+Com NetworkManager persistindo entre cenas e Enable Scene Management ativo.
+
+5) Problemas de spawn após trocar de cena
+O player não aparecia ao trocar de cena:
+- Possível conflito de NetworkManager duplicado
+- Player spawnando no menu e destruído na troca
+- Necessidade de habilitar Active Scene Synchronization no NetworkObject do Player
+
+6) Estratégias de correção
+- Garantir Player Prefab configurado no NetworkManager
+- Remover NetworkManager da cena Lobby
+- Usar RelayBootstrap como singleton e não destruir
+- Aguardar brevemente antes de trocar de cena (delay)
+
+7) Câmera do lobby travando
+Se a lobby tiver uma Main Camera fixa, ela pode bloquear a câmera do player. O problema foi resolvido removendo a câmera do lobby.
+
+8) Player spawnando sob o chão
+Acontecia porque o player spawnava antes da cena estar completamente carregada.
+Soluções propostas:
+- Criar pontos de spawn
+- Adicionar pequeno delay
+- Usar um loading simples com fade
+
+9) Pedido final
+Usuário pediu um fluxo ideal:
+- Host/Join → tela preta + “carregando”
+- Troca de cena mantendo a tela
+- Spawn apenas após a cena carregar totalmente
+- Fade out só depois do player estar pronto
+
+10) Recomendação final
+A melhor solução foi usar uma cena de Loading intermediária:
+Menu → Loading → Lobby
+No Loading:
+- Iniciar Host/Join
+- Esperar conexão + spawn
+- Host carrega Lobby via Netcode SceneManager
+- Cliente segue automaticamente
+- Após spawn, liberar o fade out
+Isso elimina corrida entre StartHost e troca de cena.
+
+Resumo técnico do estado final recomendado:
+- NetworkManager único e persistente (DontDestroyOnLoad)
+- Enable Scene Management ativado
+- Player Prefab configurado no NetworkManager
+- Lobby sem NetworkManager extra
+- Lobby sem câmera fixa
+- Spawn ocorre após cena carregar
+- Loading scene controla estado e evita “No cameras rendering”

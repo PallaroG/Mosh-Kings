@@ -547,7 +547,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2801086310
+  GlobalObjectIdHash: 3250733174
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -596,18 +596,21 @@ MonoBehaviour:
   straight:
     animationTrigger: AttackStraight
     damage: 10
+    pushPreset: 3
     knockbackForce: 15
     halfExtents: {x: 0.8, y: 0.8, z: 0.8}
     localOffset: {x: 0, y: 0, z: 1.58}
   overhead:
     animationTrigger: 
     damage: 0
+    pushPreset: 0
     knockbackForce: 0
     halfExtents: {x: 0, y: 0, z: 0}
     localOffset: {x: 0, y: 0, z: 0}
   uppercut:
     animationTrigger: 
     damage: 0
+    pushPreset: 0
     knockbackForce: 0
     halfExtents: {x: 0, y: 0, z: 0}
     localOffset: {x: 0, y: 0, z: 0}
@@ -630,18 +633,28 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MovimentPlayer
   ShowTopMostFoldoutHeaderGroup: 1
   cameraRoot: {fileID: 5452682769568064874}
-  walkSpeed: 6
-  sprintSpeed: 12
-  acceleration: 14
-  deceleration: 18
+  walkSpeed: 8
+  sprintSpeed: 20
+  inputResponsiveness: 55
+  stopResponsiveness: 85
+  directionChangeResponsiveness: 95
+  sprintRampTime: 0.12
   airControlPercent: 0.35
   jumpEnabled: 0
   jumpHeight: 1.2
   gravity: -25
   groundedStickForce: -2
-  externalAcceleration: 50
-  externalDeceleration: 35
-  maxExternalSpeed: 30
+  externalAcceleration: 28.5
+  externalDeceleration: 11.3
+  maxExternalSpeed: 114.3
+  immediatePushPercent: 0.11
+  pushControlMultiplier: 0.35
+  controlRecoverySpeed: 4.5
+  pushedControlThreshold: 0.35
+  externalStopThreshold: 0.05
+  lightPushForce: 4
+  mediumPushForce: 7.5
+  heavyPushForce: 32.93
   sprintKey: 304
   jumpKey: 32
 --- !u!33 &7158601134216623296
