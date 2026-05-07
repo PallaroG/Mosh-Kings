@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.AI; // Necessário para o NavMeshAgent
 using UnityEngine.Pool;
 
-public class Enemy : MonoBehaviour, IDamageable
+public class Enemy : MonoBehaviour, IDamageable, IImpactReceiver
 {
     [Header("Status do Punk")]
     public float maxHealth = 100f;
@@ -12,6 +12,12 @@ public class Enemy : MonoBehaviour, IDamageable
     [Header("IA e Navegação")]
     public NavMeshAgent agent;
     private Transform playerTarget;
+
+    [Header("Impacto")]
+    [SerializeField] private float impactDeceleration = 18f;
+    [SerializeField] private float maxImpactSpeed = 8f;
+    [SerializeField] private float impactStopThreshold = 0.05f;
+    private Vector3 externalImpactVelocity;
 
     [Header("Feedback Visual")]
     [Tooltip("Arraste o SpriteRenderer do inimigo aqui para ele piscar ao tomar dano.")]
@@ -68,6 +74,8 @@ public class Enemy : MonoBehaviour, IDamageable
         {
             agent.SetDestination(playerTarget.position);
         }
+
+        UpdateImpactMovement();
     }
 
     public void TakeDamage(float amount)
@@ -86,6 +94,42 @@ public class Enemy : MonoBehaviour, IDamageable
         {
             Die();
         }
+    }
+
+    public void ReceiveImpact(ImpactData impact)
+    {
+        Vector3 direction = impact.direction;
+
+        if (direction.sqrMagnitude < 0.0001f && impact.sourcePosition != Vector3.zero)
+            direction = transform.position - impact.sourcePosition;
+
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 0.0001f || impact.force <= 0f) return;
+
+        direction.Normalize();
+        float speedLimit = impact.maxExternalSpeed > 0f ? impact.maxExternalSpeed : maxImpactSpeed;
+        externalImpactVelocity += direction * impact.force;
+        externalImpactVelocity = Vector3.ClampMagnitude(externalImpactVelocity, speedLimit);
+    }
+
+    private void UpdateImpactMovement()
+    {
+        if (externalImpactVelocity.sqrMagnitude <= impactStopThreshold * impactStopThreshold)
+        {
+            externalImpactVelocity = Vector3.zero;
+            return;
+        }
+
+        Vector3 displacement = externalImpactVelocity * Time.deltaTime;
+        if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
+            agent.Move(displacement);
+        else
+            transform.position += displacement;
+
+        externalImpactVelocity = Vector3.MoveTowards(
+            externalImpactVelocity,
+            Vector3.zero,
+            impactDeceleration * Time.deltaTime);
     }
 
     private IEnumerator FlashDamageRoutine()

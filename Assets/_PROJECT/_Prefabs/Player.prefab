@@ -594,26 +594,53 @@ MonoBehaviour:
     m_Bits: 65
   singleHitPerSwing: 1
   straight:
+    attackPresetAsset: {fileID: 11400000, guid: 1d79d827ae4a4f85aa8b0fae48dbf101, type: 2}
     animationTrigger: AttackStraight
     damage: 10
-    pushPreset: 3
+    pushPresetAsset: {fileID: 11400000, guid: bbb0d3f70a1f4af09a988da512d5d8c2, type: 2}
+    legacyPushPreset: 0
     knockbackForce: 15
+    impactDuration: 0
+    targetControlMultiplier: 0
+    maxExternalSpeed: 0
     halfExtents: {x: 0.8, y: 0.8, z: 0.8}
     localOffset: {x: 0, y: 0, z: 1.58}
+    cooldown: 0
+    recoveryTime: 0
+    comboWindow: 0
+    requireHitToContinueCombo: 0
   overhead:
+    attackPresetAsset: {fileID: 0}
     animationTrigger: 
     damage: 0
-    pushPreset: 0
+    pushPresetAsset: {fileID: 0}
+    legacyPushPreset: 0
     knockbackForce: 0
+    impactDuration: 0
+    targetControlMultiplier: 0
+    maxExternalSpeed: 0
     halfExtents: {x: 0, y: 0, z: 0}
     localOffset: {x: 0, y: 0, z: 0}
+    cooldown: 0
+    recoveryTime: 0
+    comboWindow: 0
+    requireHitToContinueCombo: 0
   uppercut:
+    attackPresetAsset: {fileID: 0}
     animationTrigger: 
     damage: 0
-    pushPreset: 0
+    pushPresetAsset: {fileID: 0}
+    legacyPushPreset: 0
     knockbackForce: 0
+    impactDuration: 0
+    targetControlMultiplier: 0
+    maxExternalSpeed: 0
     halfExtents: {x: 0, y: 0, z: 0}
     localOffset: {x: 0, y: 0, z: 0}
+    cooldown: 0
+    recoveryTime: 0
+    comboWindow: 0
+    requireHitToContinueCombo: 0
   pvpMode: 1
   allowFriendlyFire: 0
   drawDebugGizmo: 1
@@ -652,6 +679,13 @@ MonoBehaviour:
   controlRecoverySpeed: 4.5
   pushedControlThreshold: 0.35
   externalStopThreshold: 0.05
+  wallImpactMode: 1
+  wallForceLossMultiplier: 0.65
+  strongWallImpactSpeed: 6
+  reduceControlOnWallImpact: 1
+  wallImpactControlMultiplier: 0.2
+  wallImpactCooldown: 0.12
+  debugWallImpactLogs: 0
   lightPushForce: 4
   mediumPushForce: 7.5
   heavyPushForce: 32.93

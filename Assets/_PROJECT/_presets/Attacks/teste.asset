@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8c0f900a6faf814883d297f8e1529f3, type: 3}
+  m_Name: teste
+  m_EditorClassIdentifier: Assembly-CSharp::AttackPreset
+  attackName: Novo Ataque
+  description: 
+  attackType: 0
+  animationTrigger: 
+  damage: 10
+  pushPreset: {fileID: 0}
+  halfExtents: {x: 0.45, y: 0.45, z: 0.8}
+  localOffset: {x: 0, y: 0, z: 1}
+  singleHitPerSwing: 1
+  cooldown: 0.35
+  recoveryTime: 0.2
+  comboWindow: 0.35
+  requireHitToContinueCombo: 0
+  debugColor: {r: 1, g: 0.25, b: 0, a: 0.35}

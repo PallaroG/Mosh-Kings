@@ -3,7 +3,7 @@ using System;
 using Unity.Netcode;
 
 [RequireComponent(typeof(NetworkObject))]
-public class PlayerStamina : NetworkBehaviour
+public class PlayerStamina : NetworkBehaviour, IDamageable
 {
     [Header("Cansaço")]
     [SerializeField] private float maxStamina = 100f;
@@ -48,6 +48,12 @@ public class PlayerStamina : NetworkBehaviour
 
         if (IsServer) ApplyDamageServer(damage);
         else ReceivePushDamageServerRpc(damage);
+    }
+
+    public void TakeDamage(float amount)
+    {
+        // In Mosh Kings, player damage currently means stamina/fatigue damage.
+        ReceivePushDamage(amount);
     }
 
     public void Recover(float amount)

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
+using UnityEngine.Serialization;
 
 public class PlayerMeleeCombat : NetworkBehaviour
 {
@@ -10,15 +11,60 @@ public class PlayerMeleeCombat : NetworkBehaviour
     [System.Serializable]
     public struct AttackData
     {
+        [Header("Attack Preset")]
+        [Tooltip("Preset novo do ataque. Se preenchido, define animacao, dano, hitbox, timing e pode definir PushPreset.")]
+        public AttackPreset attackPresetAsset;
+
         [Header("Animation")]
         public string animationTrigger;
 
         [Header("Combat")]
         public float damage;
-        public PushPreset pushPreset;
+        [Tooltip("Preset novo de empurrao. Se preenchido, define forca, duracao, desaceleracao, controle e parede.")]
+        public PushPreset pushPresetAsset;
+        [Header("Legacy Push")]
+        [FormerlySerializedAs("pushPreset")]
+        public LegacyPushPreset legacyPushPreset;
+        [Tooltip("Forca antiga de knockback. Usada quando PushPreset novo nao esta atribuido.")]
         public float knockbackForce;
+        [Tooltip("Duracao antiga do impacto. Usada quando PushPreset novo nao esta atribuido.")]
+        public float impactDuration;
+        [Range(0f, 1f)] public float targetControlMultiplier;
+        [Tooltip("Velocidade externa antiga. Usada quando PushPreset novo nao esta atribuido.")]
+        public float maxExternalSpeed;
         public Vector3 halfExtents;
         public Vector3 localOffset;
+
+        [Header("Legacy Timing")]
+        [Tooltip("Cooldown antigo usado quando AttackPreset nao esta atribuido.")]
+        public float cooldown;
+        [Tooltip("Tempo de recuperacao antigo. Guardado para compatibilidade e Fase 4.")]
+        public float recoveryTime;
+        [Tooltip("Janela futura de combo. Ainda nao executa combo nesta fase.")]
+        public float comboWindow;
+        [Tooltip("Dado futuro: se ligado, combo so deve continuar se acertar.")]
+        public bool requireHitToContinueCombo;
+    }
+
+    private struct ResolvedAttackData
+    {
+        public AttackPresetType attackPresetType;
+        public string animationTrigger;
+        public float damage;
+        public PushPreset pushPresetAsset;
+        public LegacyPushPreset legacyPushPreset;
+        public float knockbackForce;
+        public float impactDuration;
+        public float targetControlMultiplier;
+        public float maxExternalSpeed;
+        public Vector3 halfExtents;
+        public Vector3 localOffset;
+        public float cooldown;
+        public float recoveryTime;
+        public float comboWindow;
+        public bool requireHitToContinueCombo;
+        public bool singleHitPerSwing;
+        public Color debugColor;
     }
 
     [Header("References")]
@@ -46,7 +92,9 @@ public class PlayerMeleeCombat : NetworkBehaviour
     private readonly Collider[] _hitBuffer = new Collider[32];
     private readonly HashSet<Collider> _alreadyHit = new();
     private readonly HashSet<ulong> _alreadyHitPlayers = new();
+    private readonly float[] _nextAttackTimes = new float[System.Enum.GetValues(typeof(AttackType)).Length];
     private const int InvalidTeamId = -1;
+    private const float DefaultLegacyCooldown = 0.35f;
 
     private void Update()
     {
@@ -60,9 +108,13 @@ public class PlayerMeleeCombat : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        AttackData data = GetAttackData(type);
-        if (uiAnimator != null && !string.IsNullOrWhiteSpace(data.animationTrigger))
-            uiAnimator.SetTrigger(data.animationTrigger);
+        ResolvedAttackData data = ResolveAttackData(type);
+        int attackIndex = (int)type;
+        if (Time.time < _nextAttackTimes[attackIndex]) return;
+
+        _nextAttackTimes[attackIndex] = Time.time + Mathf.Max(0f, data.cooldown);
+
+        TrySetAnimationTrigger(data.animationTrigger);
 
         PlayAttackAnimClientRpc((int)type);
     }
@@ -73,10 +125,9 @@ public class PlayerMeleeCombat : NetworkBehaviour
         if (IsOwner) return; // dono já animou localmente
 
         AttackType type = (AttackType)attackTypeInt;
-        AttackData data = GetAttackData(type);
+        ResolvedAttackData data = ResolveAttackData(type);
 
-        if (uiAnimator != null && !string.IsNullOrWhiteSpace(data.animationTrigger))
-            uiAnimator.SetTrigger(data.animationTrigger);
+        TrySetAnimationTrigger(data.animationTrigger);
     }
 
     // Animation Events
@@ -101,7 +152,7 @@ public class PlayerMeleeCombat : NetworkBehaviour
     {
         if (playerCamera == null) return;
 
-        AttackData data = GetAttackData(type);
+        ResolvedAttackData data = ResolveAttackData(type);
         Vector3 center = playerCamera.transform.TransformPoint(data.localOffset);
         Quaternion rotation = playerCamera.transform.rotation;
 
@@ -119,54 +170,43 @@ public class PlayerMeleeCombat : NetworkBehaviour
             var targetNetworkObject = col.GetComponentInParent<NetworkObject>();
             if (targetNetworkObject != null && targetNetworkObject.NetworkObjectId == NetworkObjectId) continue;
 
-            if (singleHitPerSwing && _alreadyHit.Contains(col)) continue;
+            if (data.singleHitPerSwing && _alreadyHit.Contains(col)) continue;
             _alreadyHit.Add(col);
 
-            var stamina = col.GetComponentInParent<PlayerStamina>();
-            bool appliedCharacterPush = false;
+            bool appliedImpact = false;
+            Vector3 forceDir = GetKnockbackDirection(type);
+            ImpactData impact = CreateImpactData(data, forceDir);
+            float damage = impact.damage;
+            float force = impact.force;
 
-            if (stamina != null)
+            var damageable = col.GetComponentInParent<IDamageable>();
+            var impactReceiver = col.GetComponentInParent<IImpactReceiver>();
+
+            if (targetNetworkObject != null)
             {
-                if (targetNetworkObject == null)
-                    targetNetworkObject = stamina.GetComponent<NetworkObject>();
-
                 if (!CanHitPlayer(targetNetworkObject)) continue;
 
                 ulong playerId = targetNetworkObject.NetworkObjectId;
                 if (_alreadyHitPlayers.Contains(playerId)) continue;
                 _alreadyHitPlayers.Add(playerId);
-
-                stamina.ReceivePushDamage(data.damage);
-
-                var movement = stamina.GetComponent<MovementPlayer>();
-                if (movement != null)
-                {
-                    Vector3 forceDir = GetKnockbackDirection(type);
-                    movement.AddPush(forceDir, GetKnockbackForce(movement, data));
-                    appliedCharacterPush = true;
-                }
             }
-            else
-            {
-                var damageable = col.GetComponentInParent<IDamageable>();
-                if (damageable != null) damageable.TakeDamage(data.damage);
-                else col.transform.root.SendMessage("TakeDamage", data.damage, SendMessageOptions.DontRequireReceiver);
 
-                var movement = col.GetComponentInParent<MovementPlayer>();
-                if (movement != null)
-                {
-                    Vector3 forceDir = GetKnockbackDirection(type);
-                    movement.AddPush(forceDir, GetKnockbackForce(movement, data));
-                    appliedCharacterPush = true;
-                }
+            if (damageable != null)
+                damageable.TakeDamage(damage);
+            else
+                // Legacy fallback for older scene objects that still expose TakeDamage without IDamageable.
+                // Remove after all combat targets are migrated to IDamageable.
+                col.transform.root.SendMessage("TakeDamage", damage, SendMessageOptions.DontRequireReceiver);
+
+            if (impactReceiver != null)
+            {
+                impactReceiver.ReceiveImpact(impact);
+                appliedImpact = true;
             }
 
             Rigidbody rb = col.attachedRigidbody;
-            if (!appliedCharacterPush && rb != null && !rb.isKinematic)
-            {
-                Vector3 forceDir = GetKnockbackDirection(type);
-                rb.AddForce(forceDir * GetKnockbackForce(null, data), ForceMode.Impulse);
-            }
+            if (!appliedImpact && rb != null && !rb.isKinematic)
+                rb.AddForce(forceDir * force, ForceMode.Impulse);
 
             _hitBuffer[i] = null;
         }
@@ -231,19 +271,113 @@ public class PlayerMeleeCombat : NetworkBehaviour
         };
     }
 
-    private static float GetKnockbackForce(MovementPlayer movement, AttackData data)
+    private void TrySetAnimationTrigger(string triggerName)
     {
-        if (data.pushPreset != PushPreset.Custom && movement != null)
-            return movement.GetPushForce(data.pushPreset);
+        if (uiAnimator == null || string.IsNullOrWhiteSpace(triggerName)) return;
+
+        foreach (AnimatorControllerParameter parameter in uiAnimator.parameters)
+        {
+            if (parameter.type == AnimatorControllerParameterType.Trigger &&
+                parameter.name == triggerName)
+            {
+                uiAnimator.SetTrigger(triggerName);
+                return;
+            }
+        }
+
+        Debug.LogWarning($"[PlayerMeleeCombat] Animator trigger '{triggerName}' nao existe no Animator atual.", this);
+    }
+
+    private ResolvedAttackData ResolveAttackData(AttackType type)
+    {
+        AttackData data = GetAttackData(type);
+        AttackPreset preset = data.attackPresetAsset;
+
+        if (preset != null)
+        {
+            return new ResolvedAttackData
+            {
+                attackPresetType = preset.AttackType,
+                animationTrigger = preset.AnimationTrigger,
+                damage = preset.Damage,
+                pushPresetAsset = preset.PushPreset != null ? preset.PushPreset : data.pushPresetAsset,
+                legacyPushPreset = data.legacyPushPreset,
+                knockbackForce = data.knockbackForce,
+                impactDuration = data.impactDuration,
+                targetControlMultiplier = data.targetControlMultiplier,
+                maxExternalSpeed = data.maxExternalSpeed,
+                halfExtents = preset.HalfExtents,
+                localOffset = preset.LocalOffset,
+                cooldown = preset.Cooldown,
+                recoveryTime = preset.RecoveryTime,
+                comboWindow = preset.ComboWindow,
+                requireHitToContinueCombo = preset.RequireHitToContinueCombo,
+                singleHitPerSwing = preset.SingleHitPerSwing,
+                debugColor = preset.DebugColor
+            };
+        }
+
+        return new ResolvedAttackData
+        {
+            attackPresetType = AttackPresetType.SimplePunch,
+            animationTrigger = data.animationTrigger,
+            damage = data.damage,
+            pushPresetAsset = data.pushPresetAsset,
+            legacyPushPreset = data.legacyPushPreset,
+            knockbackForce = data.knockbackForce,
+            impactDuration = data.impactDuration,
+            targetControlMultiplier = data.targetControlMultiplier,
+            maxExternalSpeed = data.maxExternalSpeed,
+            halfExtents = data.halfExtents,
+            localOffset = data.localOffset,
+            cooldown = data.cooldown > 0f ? data.cooldown : DefaultLegacyCooldown,
+            recoveryTime = data.recoveryTime,
+            comboWindow = data.comboWindow,
+            requireHitToContinueCombo = data.requireHitToContinueCombo,
+            singleHitPerSwing = singleHitPerSwing,
+            debugColor = gizmoColor
+        };
+    }
+
+    private ImpactData CreateImpactData(ResolvedAttackData data, Vector3 forceDir)
+    {
+        if (data.pushPresetAsset != null)
+            return data.pushPresetAsset.CreateImpactData(data.damage, forceDir, playerCamera.transform.position);
+
+        return new ImpactData(
+            data.damage,
+            forceDir,
+            GetLegacyKnockbackForce(data),
+            data.impactDuration,
+            data.maxExternalSpeed,
+            data.targetControlMultiplier,
+            playerCamera.transform.position);
+    }
+
+    private float GetLegacyKnockbackForce(ResolvedAttackData data)
+    {
+        if (data.legacyPushPreset != LegacyPushPreset.Custom)
+        {
+            float presetForce = GetLegacyPushForce(data.legacyPushPreset);
+            if (presetForce > 0f) return presetForce;
+        }
 
         return data.knockbackForce;
+    }
+
+    private float GetLegacyPushForce(LegacyPushPreset preset)
+    {
+        var movement = GetComponent<MovementPlayer>();
+        if (movement == null) return 0f;
+
+        return movement.GetPushForce(preset);
     }
 
     private void OnDrawGizmos()
     {
         if (!drawDebugGizmo || playerCamera == null) return;
 
-        AttackData data = GetAttackData(debugAttackType);
+        ResolvedAttackData data = ResolveAttackData(debugAttackType);
         Transform cam = playerCamera.transform;
         Vector3 center = cam.TransformPoint(data.localOffset);
         Quaternion rot = cam.rotation;
@@ -251,17 +385,12 @@ public class PlayerMeleeCombat : NetworkBehaviour
         Matrix4x4 old = Gizmos.matrix;
         Gizmos.matrix = Matrix4x4.TRS(center, rot, Vector3.one);
 
-        Gizmos.color = gizmoColor;
+        Gizmos.color = data.debugColor;
         Gizmos.DrawCube(Vector3.zero, data.halfExtents * 2f);
         Gizmos.DrawWireCube(Vector3.zero, data.halfExtents * 2f);
 
         Gizmos.matrix = old;
     }
-}
-
-public interface IDamageable
-{
-    void TakeDamage(float amount);
 }
 
 public interface ITeamProvider

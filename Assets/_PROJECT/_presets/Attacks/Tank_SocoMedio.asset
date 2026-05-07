@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8c0f900a6faf814883d297f8e1529f3, type: 3}
+  m_Name: Tank_SocoMedio
+  m_EditorClassIdentifier: Assembly-CSharp::AttackPreset
+  attackName: Tank_SocoMedio
+  description: Soco medio do Tank para impacto padrao de personagem pesado.
+  attackType: 0
+  animationTrigger: AttackStraight
+  damage: 12
+  pushPreset: {fileID: 11400000, guid: a1f5f622bb3d4e24a8adfc557d9e0101, type: 2}
+  halfExtents: {x: 0.55, y: 0.5, z: 0.85}
+  localOffset: {x: 0, y: 0, z: 1.05}
+  singleHitPerSwing: 1
+  cooldown: 0.6
+  recoveryTime: 0.35
+  comboWindow: 0.35
+  requireHitToContinueCombo: 0
+  debugColor: {r: 1, g: 0.45, b: 0.1, a: 0.35}

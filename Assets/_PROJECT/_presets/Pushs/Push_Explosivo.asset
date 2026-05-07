@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 529219a420ad5cf49b815c6db655bcc9, type: 3}
+  m_Name: Push_Explosivo
+  m_EditorClassIdentifier: Assembly-CSharp::PushPreset
+  presetName: Push_Explosivo
+  description: Empurrao explosivo, seco e curto para eventos especiais.
+  staminaDamageMultiplier: 1
+  horizontalForce: 22
+  impactDuration: 0.2
+  maxExternalSpeed: 24
+  externalDeceleration: 26
+  targetControlMultiplier: 0.05
+  wallImpactMode: 0
+  wallForceLossMultiplier: 1
+  strongWallImpactSpeed: 6
+  reduceControlOnWallImpact: 1
+  wallImpactControlMultiplier: 0.05

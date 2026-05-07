@@ -1,16 +1,25 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [RequireComponent(typeof(Collider))]
 public class EnemyPushDamage : MonoBehaviour
 {
-    [Header("Dano por empurrão")]
-    [SerializeField] private float basePushDamage = 8f;      // configurável por inimigo
-    [SerializeField] private float impactMultiplier = 0.15f; // escala com impacto
-    [SerializeField] private PushPreset pushPreset = PushPreset.Custom;
-    [SerializeField] private float pushForce = 6f;           // força aplicada no player
+    [Header("Dano por empurrao")]
+    [SerializeField] private float basePushDamage = 8f;
+    [SerializeField] private float impactMultiplier = 0.15f;
+    [Tooltip("Preset novo de empurrao. Se preenchido, define forca, duracao, controle e comportamento de parede.")]
+    [SerializeField] private PushPreset pushPresetAsset;
+    [Header("Legacy Push")]
+    [FormerlySerializedAs("pushPreset")]
+    [SerializeField] private LegacyPushPreset legacyPushPreset = LegacyPushPreset.Custom;
+    [Tooltip("Forca antiga de empurrao. Usada quando PushPreset novo nao esta atribuido.")]
+    [SerializeField] private float pushForce = 6f;
+    [SerializeField] private float impactDuration = 0f;
+    [SerializeField] private float maxExternalSpeed = 0f;
+    [SerializeField, Range(0f, 1f)] private float targetControlMultiplier = 0.35f;
     [SerializeField] private float impactPushMultiplier = 0.08f;
     [SerializeField] private float maxImpactPushBonus = 3f;
-    [SerializeField] private float hitCooldown = 0.35f;      // evita dano por frame
+    [SerializeField] private float hitCooldown = 0.35f;
 
     private float lastHitTime = -999f;
 
@@ -21,53 +30,83 @@ public class EnemyPushDamage : MonoBehaviour
 
     private void OnTriggerStay(Collider other)
     {
-        // Se usa trigger, impacto físico real não vem pronto.
-        // Aqui usa dano base (impacto = 0), mas ainda aplica empurrão.
-        Vector3 estimatedImpact = Vector3.zero;
-        TryApplyPushAndDamage(other, estimatedImpact);
+        TryApplyPushAndDamage(other, Vector3.zero);
     }
 
     private void TryApplyPushAndDamage(Collider other, Vector3 relativeVelocity)
     {
         if (Time.time - lastHitTime < hitCooldown) return;
 
-        PlayerStamina stamina = other.GetComponent<PlayerStamina>();
-        if (stamina == null) stamina = other.GetComponentInParent<PlayerStamina>();
-        if (stamina == null) return;
+        IDamageable damageable = other.GetComponent<IDamageable>();
+        if (damageable == null) damageable = other.GetComponentInParent<IDamageable>();
 
-        MovementPlayer movement = other.GetComponent<MovementPlayer>();
-        if (movement == null) movement = other.GetComponentInParent<MovementPlayer>();
+        IImpactReceiver impactReceiver = other.GetComponent<IImpactReceiver>();
+        if (impactReceiver == null) impactReceiver = other.GetComponentInParent<IImpactReceiver>();
 
-        // Direção do empurrão (inimigo -> player)
-        Vector3 dir = (other.transform.position - transform.position).normalized;
-        dir.y = 0f;
+        if (damageable == null && impactReceiver == null) return;
 
-        if (dir.sqrMagnitude < 0.0001f)
-            dir = transform.forward;
+        Vector3 direction = other.transform.position - transform.position;
+        direction.y = 0f;
 
-        // Intensidade de impacto
+        if (direction.sqrMagnitude < 0.0001f)
+            direction = transform.forward;
+
         float impact = relativeVelocity.magnitude;
-        float finalDamage = basePushDamage + (impact * impactMultiplier);
+        float finalDamage = basePushDamage + impact * impactMultiplier;
+        ImpactData impactData = default;
+        bool hasImpactData = impactReceiver != null;
 
-        // Aplica dano de cansaço
-        stamina.ReceivePushDamage(finalDamage);
-
-        // Empurrão no CharacterController via velocidade externa
-        if (movement != null)
+        if (hasImpactData)
         {
-            movement.AddPush(dir, GetPushForce(movement, impact));
+            MovementPlayer movement = impactReceiver as MovementPlayer;
+            impactData = CreateImpactData(movement, finalDamage, direction, impact);
+            finalDamage = impactData.damage;
         }
+        else if (pushPresetAsset != null)
+        {
+            finalDamage = pushPresetAsset.ResolveDamage(finalDamage);
+        }
+
+        if (damageable != null)
+            damageable.TakeDamage(finalDamage);
+
+        if (hasImpactData)
+            impactReceiver.ReceiveImpact(impactData);
 
         lastHitTime = Time.time;
     }
 
-    private float GetPushForce(MovementPlayer movement, float impact)
+    private ImpactData CreateImpactData(MovementPlayer movement, float finalDamage, Vector3 direction, float impact)
     {
-        float baseForce = pushPreset == PushPreset.Custom || movement == null
-            ? pushForce
-            : movement.GetPushForce(pushPreset);
+        if (pushPresetAsset != null)
+        {
+            ImpactData data = pushPresetAsset.CreateImpactData(finalDamage, direction, transform.position);
+            data.force += GetImpactPushBonus(impact);
+            return data;
+        }
 
+        return new ImpactData(
+            finalDamage,
+            direction,
+            GetLegacyPushForce(movement, impact),
+            impactDuration,
+            maxExternalSpeed,
+            targetControlMultiplier,
+            transform.position);
+    }
+
+    private float GetLegacyPushForce(MovementPlayer movement, float impact)
+    {
+        float baseForce = legacyPushPreset == LegacyPushPreset.Custom || movement == null
+            ? pushForce
+            : movement.GetPushForce(legacyPushPreset);
+
+        return baseForce + GetImpactPushBonus(impact);
+    }
+
+    private float GetImpactPushBonus(float impact)
+    {
         float impactBonus = Mathf.Min(impact * impactPushMultiplier, maxImpactPushBonus);
-        return baseForce + impactBonus;
+        return impactBonus;
     }
 }
